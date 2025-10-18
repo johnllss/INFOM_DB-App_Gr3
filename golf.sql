@@ -8,8 +8,8 @@ CREATE TABLE payment (
  	date_paid			DATETIME, -- null = not yet paid
   	payment_method		ENUM('Cash on Delivery', 'GCash', 'Credit Card'),
   	status				ENUM('Cancelled', 'Pending', 'Paid'),
-  	discount_applied	DECIMAL(1,2) DEFAULT 0.0
-  	FOREIGN KEY 		(user_id) REFERENCES users(user_id),
+  	discount_applied	DECIMAL(1,2) DEFAULT 0.0,
+  	FOREIGN KEY 		(user_id) REFERENCES user(user_id),
   	FOREIGN KEY 		(session_id) REFERENCES session(session_id),
   	FOREIGN KEY 		(cart_id) REFERENCES cart(cart_id)
 );
@@ -22,4 +22,16 @@ CREATE TABLE staff (
   role			VARCHAR(50) NOT NULL,
   status		ENUM('Available', 'Occupied') NOT NULL DEFAULT 'Available',
   service_fee	DECIMAL(8,2) NOT NULL
+);
+
+CREATE TABLE session (
+	session_id			BIGINT PRIMARY KEY AUTO_INCREMENT,
+    type				ENUM('Driving Range', 'Fairway'),
+    holes				ENUM('Half 9', 'Full 18') DEFAULT NULL,
+    buckets				INT DEFAULT NULL,
+    session_schedule	DATE NOT NULL,
+    people_quantity		INT NOT NULL,
+    status				ENUM('CONFIRMED','CANCELLED','ON GOING','FINISHED') NOT NULL,
+    FOREIGN KEY			(payment_id)	REFERENCES payment(payment_id),
+    FOREIGN KEY			(user_id)		REFERENCES user(user_id)
 );
