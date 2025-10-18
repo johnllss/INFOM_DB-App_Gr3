@@ -7,7 +7,7 @@ CREATE TABLE user (
     last_name 			VARCHAR(100) NOT NULL,
     email				VARCHAR(255) NOT NULL UNIQUE,
     contact				VARCHAR(20) NULL,
-    membership_tier 	ENUM('Bronze', 'Silver', 'Gold', 'Platinum', 'Diamon') DEFAULT 'Bronze',
+    membership_tier 	ENUM('Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond') DEFAULT 'Bronze',
     membership_start 	DATE,
     membership_end 		DATE,
     months_subscribed 	BIGINT,
