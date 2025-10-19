@@ -21,7 +21,7 @@ CREATE TABLE user (
 CREATE TABLE cart (
 	    cart_id     BIGINT PRIMARY KEY AUTO_INCREMENT,
 	    total_price DECIMAL(10,2) DEFAULT 0 NOT NULL,
-			user_id     BIGINT NULL,
+		user_id     BIGINT NULL,
     CONSTRAINT fk_cart_user FOREIGN KEY (user_id) REFERENCES user(user_id)
 );
 
@@ -44,7 +44,7 @@ CREATE TABLE session (
 	    people_quantity     INT NOT NULL,
 	    status              ENUM('CONFIRMED','CANCELLED','ONGOING','FINISHED') NOT NULL,
 	    session_price       DECIMAL(10,2) DEFAULT 0,
-			user_id             BIGINT NOT NULL,
+		user_id             BIGINT NOT NULL,
 	    staff_id            BIGINT NULL,
     CONSTRAINT fk_session_user FOREIGN KEY (user_id) REFERENCES user(user_id),
     CONSTRAINT fk_session_staff FOREIGN KEY (staff_id) REFERENCES staff(staff_id)
@@ -57,7 +57,7 @@ CREATE TABLE item (
 	    type        ENUM('Sale','Rental') NOT NULL,
 	    quantity    INT DEFAULT 1 NOT NULL,
 	    price       DECIMAL(10,2) NOT NULL,
-			cart_id     BIGINT NULL,
+		cart_id     BIGINT NULL,
     CONSTRAINT fk_item_cart FOREIGN KEY (cart_id) REFERENCES cart(cart_id)
 );
 
@@ -69,7 +69,7 @@ CREATE TABLE payment (
 	    payment_method      ENUM('Cash','GCash','Credit Card'),
 	    status              ENUM('Cancelled','Pending','Paid'),
 	    discount_applied    DECIMAL(5,2) DEFAULT 0.0,
-			user_id             BIGINT NOT NULL,
+		user_id             BIGINT NOT NULL,
 	    cart_id             BIGINT NULL,
 	    session_id          BIGINT NULL,
     CONSTRAINT fk_payment_user FOREIGN KEY (user_id) REFERENCES user(user_id),
