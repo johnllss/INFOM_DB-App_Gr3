@@ -5,28 +5,28 @@ USE dbgolf;
 SET FOREIGN_KEY_CHECKS = 0;
 
 CREATE TABLE user (
-    user_id             BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id             INT PRIMARY KEY AUTO_INCREMENT,
     first_name          VARCHAR(100) NOT NULL,
-    middle_name         VARCHAR(100) NULL,
+    middle_name         VARCHAR(100),
     last_name           VARCHAR(100) NOT NULL,
     email               VARCHAR(255) NOT NULL UNIQUE,
-    contact             VARCHAR(20) NULL,
+    contact             VARCHAR(20),
     membership_tier     ENUM('Unsubscribed','Bronze','Silver','Gold','Platinum','Diamond') DEFAULT 'Unsubscribed',
     membership_start    DATE,
     membership_end      DATE,
-    months_subscribed   BIGINT,
-    loyalty_points      BIGINT DEFAULT 0
+    months_subscribed   INT,
+    loyalty_points      INT DEFAULT 0
 );
 
 CREATE TABLE cart (
-	    cart_id     BIGINT PRIMARY KEY AUTO_INCREMENT,
+	    cart_id     INT PRIMARY KEY AUTO_INCREMENT,
 	    total_price DECIMAL(10,2) DEFAULT 0 NOT NULL,
-		user_id     BIGINT NULL,
+		user_id     INT,
     CONSTRAINT fk_cart_user FOREIGN KEY (user_id) REFERENCES user(user_id)
 );
 
 CREATE TABLE staff (
-    staff_id    BIGINT PRIMARY KEY AUTO_INCREMENT,
+    staff_id    INT PRIMARY KEY AUTO_INCREMENT,
     name        VARCHAR(100) NOT NULL,
     email       VARCHAR(100) NOT NULL,
     contact     VARCHAR(20) NOT NULL,
@@ -36,42 +36,42 @@ CREATE TABLE staff (
 );
 
 CREATE TABLE session (
-	    session_id          BIGINT PRIMARY KEY AUTO_INCREMENT,
+	    session_id          INT PRIMARY KEY AUTO_INCREMENT,
 	    type                ENUM('Driving Range','Fairway'),
-	    holes               ENUM('Half 9','Full 18') DEFAULT NULL,
-	    buckets             INT DEFAULT NULL,
+	    holes               ENUM('Half 9','Full 18'),
+	    buckets             INT,
 	    session_schedule    DATETIME NOT NULL,
 	    people_quantity     INT NOT NULL,
-	    status              ENUM('CONFIRMED','CANCELLED','ONGOING','FINISHED') NOT NULL,
+	    status              ENUM('Cancelled','Confirmed','Ongoing','Finished') NOT NULL,
 	    session_price       DECIMAL(10,2) DEFAULT 0,
-		user_id             BIGINT NOT NULL,
-	    staff_id            BIGINT NULL,
+		user_id             INT NOT NULL,
+	    staff_id            INT,
     CONSTRAINT fk_session_user FOREIGN KEY (user_id) REFERENCES user(user_id),
     CONSTRAINT fk_session_staff FOREIGN KEY (staff_id) REFERENCES staff(staff_id)
 );
 
 
 CREATE TABLE item (
-	    item_id     BIGINT PRIMARY KEY AUTO_INCREMENT,
+	    item_id     INT PRIMARY KEY AUTO_INCREMENT,
 	    name        VARCHAR(100) NOT NULL,
 	    type        ENUM('Sale','Rental') NOT NULL,
 	    quantity    INT DEFAULT 1 NOT NULL,
 	    price       DECIMAL(10,2) NOT NULL,
-		cart_id     BIGINT NULL,
+		cart_id     INT,
     CONSTRAINT fk_item_cart FOREIGN KEY (cart_id) REFERENCES cart(cart_id)
 );
 
 
 CREATE TABLE payment (
-	    payment_id          BIGINT PRIMARY KEY AUTO_INCREMENT,
-	    total_price         DECIMAL(10,2),
-	    date_paid           DATETIME NULL,
-	    payment_method      ENUM('Cash','GCash','Credit Card'),
-	    status              ENUM('Cancelled','Pending','Paid'),
+	    payment_id          INT PRIMARY KEY AUTO_INCREMENT,
+	    total_price         DECIMAL(10,2) DEFAULT 0,
+	    date_paid           DATETIME NOT NULL,
+	    payment_method      ENUM('Cash','GCash','Credit Card') NOT NULL,
+	    status              ENUM('Cancelled','Pending','Paid') NOT NULL,
 	    discount_applied    DECIMAL(5,2) DEFAULT 0.0,
-		user_id             BIGINT NOT NULL,
-	    cart_id             BIGINT NULL,
-	    session_id          BIGINT NULL,
+		user_id             INT NOT NULL,
+	    cart_id             INT,
+	    session_id          INT,
     CONSTRAINT fk_payment_user FOREIGN KEY (user_id) REFERENCES user(user_id),
     CONSTRAINT fk_payment_cart FOREIGN KEY (cart_id) REFERENCES cart(cart_id),
     CONSTRAINT fk_payment_session FOREIGN KEY (session_id) REFERENCES session(session_id)
