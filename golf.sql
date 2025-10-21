@@ -11,11 +11,11 @@ CREATE TABLE user (
     last_name           VARCHAR(100) NOT NULL,
     email               VARCHAR(255) NOT NULL UNIQUE,
     contact             VARCHAR(20),
-    membership_tier     ENUM('Unsubscribed','Bronze','Silver','Gold','Platinum','Diamond') DEFAULT 'Unsubscribed',
+    membership_tier     ENUM('Unsubscribed','Bronze','Silver','Gold','Platinum','Diamond') DEFAULT 'Unsubscribed' NOT NULL,
     membership_start    DATE,
     membership_end      DATE,
-    months_subscribed   INT,
-    loyalty_points      INT DEFAULT 0
+    months_subscribed   INT DEFAULT 0 NOT NULL,
+    loyalty_points      INT DEFAULT 0 NOT NULL
 );
 
 CREATE TABLE cart (
