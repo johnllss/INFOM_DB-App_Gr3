@@ -77,7 +77,7 @@ CREATE TABLE payment (
 	    total_price         DECIMAL(10,2) DEFAULT 0,
 	    date_paid           DATETIME NOT NULL,
 	    payment_method      ENUM('Cash','GCash','Credit Card') NOT NULL,
-	    status              ENUM('Cancelled','Pending','Paid') NOT NULL,
+	    status              ENUM('Pending','Paid') NOT NULL,
 	    discount_applied    DECIMAL(5,2) DEFAULT 0.0,
 		user_id             INT NOT NULL,
 	    cart_id             INT,
