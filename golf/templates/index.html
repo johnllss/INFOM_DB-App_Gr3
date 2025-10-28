@@ -1,0 +1,42 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Index
+{% endblock %}
+
+{% block main %}
+    <h1>Hello, {{ name }}.</h1>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Symbol</th>
+                <th>Shares</th>
+                <th>Price</th>
+                <th>TOTAL</th>
+            </tr>
+        </thead>
+        <tbody>
+                {% for order in orders %}
+                <tr>
+                    <td>{{ order.symbol }}</td>
+                    <td>{{ order.total_shares }}</td>
+                    <td>{{ order.price | usd }}</td>
+                    <td>{{ order.total | usd }}</td>
+                </tr>
+                {% endfor %}
+                <tr>
+                    <td></td>
+                    <td></td>
+                    <td><b>Cash</b></td>
+                    <td>{{ cash | usd }}</td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td></td>
+                    <td><b>TOTAL</b></td>
+                    <td>{{ profit | usd }}</td>
+                </tr>
+        </tbody>
+    </table>
+{% endblock %}

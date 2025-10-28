@@ -1,0 +1,28 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    History
+{% endblock %}
+
+{% block main %}
+    <table>
+        <thead>
+            <tr>
+                <th>Symbol</th>
+                <th>Shares</th>
+                <th>Price</th>
+                <th>Transacted</th>
+            </tr>
+        </thead>
+        <tbody>
+                {% for order in orders %}
+                <tr>
+                    <td>{{ order.symbol }}</td>
+                    <td>{{ order.shares }}</td>
+                    <td>{{ order.value | usd }}</td>
+                    <td>{{ order.purchase }}</td>
+                </tr>
+                {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}
