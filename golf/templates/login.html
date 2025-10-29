@@ -5,13 +5,33 @@
 {% endblock %}
 
 {% block main %}
-    <form action="/login" method="post">
-        <div class="mb-3">
-            <input autocomplete="off" autofocus class="form-control mx-auto w-auto" name="email" placeholder="Email" type="text">
+<div class="container-fluid">
+    <div class="row min-vh-100">
+
+        <div class="col-md-6 p-0" id="image-side">
+            </div>
+
+        <div class="col-md-6 d-flex align-items-center justify-content-center py-5">
+            
+            <div class="w-75"> <h2 class="text-center mb-4">Log In</h2>
+                
+                <form action="/login" method="post">
+                    <div class="mb-3">
+                        <input autocomplete="off" autofocus class="form-control" id="username" name="username" placeholder="Username" type="text">
+                    </div>
+                    <div class="mb-3">
+                        <input class="form-control" id="password" name="password" placeholder="Password" type="password">
+                    </div>
+                    <button class="btn btn-green w-100" type="submit">Log In</button>
+                </form>
+
+                <div class="text-center mt-3">
+                    Don't have an account?
+                    <a href="/register">Register here.</a>
+                </div>
+
+            </div>
         </div>
-        <div class="mb-3">
-            <input class="form-control mx-auto w-auto" name="password" placeholder="Password" type="password">
-        </div>
-        <button class="btn btn-primary" type="submit">Log In</button>
-    </form>
+    </div>
+</div>
 {% endblock %}

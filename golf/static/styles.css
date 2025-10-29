@@ -1,26 +1,49 @@
+body {
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 400;
+}
+
+strong {
+  font-weight: 700;
+}
+
+em {
+  font-style: italic;
+}
+
 /* Size for brand */
 nav .navbar-brand
 {
-    font-size: xx-large;
+    font-size: x-large;
 }
 
 /* Colors for brand */
-nav .navbar-brand .blue
-{
-    color: #537fbe;
-}
-nav .navbar-brand .red
-{
-    color: #ea433b;
-}
-nav .navbar-brand .yellow
-{
-    color: #f5b82e;
-}
 nav .navbar-brand .green
 {
     color: #2e944b;
 }
+
+.btn-green {
+  background-color: #2e944b;
+  border-color: #2e944b;
+  color: #ffffff;
+}
+
+.btn-green:hover {
+  background-color: #267a3e;
+  border-color: #267a3e;
+  color: #ffffff;
+}
+
+a {
+      color: #2e944b;
+      text-decoration: none;
+    }
+
+  a:hover {
+    color: #267a3e;
+    text-decoration: underline;
+  }
 
 table {
   background-color: transparent;
@@ -52,3 +75,8 @@ tfoot td:not(:first-child) {
 
 thead th { background: #f8f9fa; font-weight: 600; }
 tbody tr:nth-child(even) { background: #fafafa; }
+
+#image-side {
+    background: url('/static/gab_cameo.png') no-repeat center center; 
+    background-size: cover;
+}
