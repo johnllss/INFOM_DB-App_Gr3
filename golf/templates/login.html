@@ -8,30 +8,42 @@
 <div class="container-fluid">
     <div class="row min-vh-100">
 
-        <div class="col-md-6 p-0" id="image-side">
+        <div class="col-md-6 p-0" id="image-side"></div>
+
+        <div class="col-md-6 d-flex flex-column align-items-center py-5">
+    
+            <div class="w-75">
+                <div class="navbar-brand d-flex align-items-center mb-4">
+                    <img src="/static/golf_logo.png" alt="TeeTrack Logo" width="30" height="30" class="d-inline-block me-2">
+                    <span class="fs-4"><strong>TeeTrack</strong></span>
+                </div>
             </div>
 
-        <div class="col-md-6 d-flex align-items-center justify-content-center py-5">
-            
-            <div class="w-75"> <h2 class="text-center mb-4">Log In</h2>
+            <div class="w-75 my-auto">
+                <h1 class="text-center mb-4"><strong>Log In</strong></h1>
                 
                 <form action="/login" method="post">
                     <div class="mb-3">
-                        <input autocomplete="off" autofocus class="form-control" id="username" name="username" placeholder="Username" type="text">
+                        <input autocomplete="off" autofocus class="form-control" name="email" placeholder="Email address" type="text">
                     </div>
                     <div class="mb-3">
-                        <input class="form-control" id="password" name="password" placeholder="Password" type="password">
+                        <input class="form-control" name="password" placeholder="Password" type="password">
                     </div>
-                    <button class="btn btn-green w-100" type="submit">Log In</button>
+                    <div class="d-flex justify-content-center">
+                        <button class="btn btn-green w-75" type="submit"><strong>Log In</strong></button>
+                    </div>
                 </form>
+            </div>
 
+            <div class="w-75">
                 <div class="text-center mt-3">
                     Don't have an account?
-                    <a href="/register">Register here.</a>
+                    <a href="/register"><strong>Register Here.</strong></a>
                 </div>
-
             </div>
+
         </div>
+
     </div>
 </div>
 {% endblock %}
