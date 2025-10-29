@@ -41,16 +41,18 @@ def dbtest():
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
+        first_name = request.form.get("fname")
+        last_name = request.form.get("lname")
         email = request.form.get("email")
         password = request.form.get("password")
         confirmation = request.form.get("confirmation")
 
         if not email:
-            return apology("must provide username", 400)
+            return apology("aray ko sah mali naman", 67)
         elif not password or not confirmation:
-            return apology("must provide password", 400)
+            return apology("aray ko sah mali", 67)
         if password != confirmation:
-            return apology("passwords must match", 400)
+            return apology("para kang kalaban", 67)
 
         hash = generate_password_hash(password)
 
