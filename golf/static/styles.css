@@ -17,12 +17,6 @@ nav .navbar-brand
     font-size: x-large;
 }
 
-/* Colors for brand */
-nav .navbar-brand .green
-{
-    color: #2e944b;
-}
-
 .btn-green {
   background-color: #2e944b;
   border-color: #2e944b;
@@ -40,10 +34,10 @@ a {
       text-decoration: none;
     }
 
-  a:hover {
-    color: #267a3e;
-    text-decoration: underline;
-  }
+a:hover {
+  color: #267a3e;
+  text-decoration: underline;
+}
 
 table {
   background-color: transparent;
