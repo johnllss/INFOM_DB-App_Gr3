@@ -1,6 +1,4 @@
-DROP SCHEMA IF EXISTS dbgolf;
-CREATE SCHEMA IF NOT EXISTS dbgolf;
-USE dbgolf;
+USE bdxiyb8jgtmepmiynhz9;
 
 SET FOREIGN_KEY_CHECKS = 0;
 
