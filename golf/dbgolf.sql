@@ -10,6 +10,7 @@ CREATE TABLE user (
     middle_name         VARCHAR(100),
     last_name           VARCHAR(100) NOT NULL,
     email               VARCHAR(255) NOT NULL UNIQUE,
+    hash                VARCHAR(255) NOT NULL,
     contact             VARCHAR(20),
     membership_tier     ENUM('Unsubscribed','Bronze','Silver','Gold','Platinum','Diamond') DEFAULT 'Unsubscribed' NOT NULL,
     membership_start    DATE,
@@ -36,7 +37,7 @@ CREATE TABLE staff (
     service_fee DECIMAL(8,2) NOT NULL
 );
 
-CREATE TABLE session (
+CREATE TABLE golf_session (
 	    session_id          INT PRIMARY KEY AUTO_INCREMENT,
 	    type                ENUM('Driving Range','Fairway'),
 	    holes               ENUM('Half 9','Full 18'),
@@ -57,7 +58,7 @@ CREATE TABLE session_user (
         loyalty_earned		INT DEFAULT 0,
 	UNIQUE (session_id, user_id),
     CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES user(user_id),
-    CONSTRAINT fk_session FOREIGN KEY (session_id) REFERENCES session(session_id),
+    CONSTRAINT fk_session FOREIGN KEY (session_id) REFERENCES golf_session(session_id),
     CONSTRAINT fk_staff FOREIGN KEY (staff_id) REFERENCES staff(staff_id)
 );
 
