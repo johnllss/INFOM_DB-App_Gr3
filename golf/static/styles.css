@@ -28,6 +28,35 @@ nav .navbar-brand
   color: #ffffff;
 }
 
+.btn-lightgreen {
+  background-color: #45cf63;
+  border-color: #45cf63;
+  color: #ffffff;
+  padding: 15px 60px;
+  font-size: 20px;
+  margin-top: 15px;
+}
+
+.btn-lightgreen:hover {
+  background-color: #53d16e;
+  border-color: #53d16e;
+  color: #ffffff;
+  padding: 15px 60px;
+  font-size: 20px;
+  margin-top: 15px;
+}
+
+
+.rounded-edge {
+  border-radius: 30px;
+  filter: brightness(80%)
+}
+
+.translucent-bg {
+    background-color: rgba(0, 0, 0, 0.1); 
+    color: white; 
+}
+
 a {
   color: #2e944b;
   text-decoration: none;
