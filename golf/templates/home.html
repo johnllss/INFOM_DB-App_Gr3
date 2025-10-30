@@ -9,11 +9,11 @@
 {% endblock %}
 
 {% block main %}
-<div class="container text-light">
+<div class="container-fluid px-5 text-light">
     
     <div class="row" style="min-height: 80vh;">
         
-        <div class="col-md-6 d-flex flex-column justify-content-end pb-1">
+        <div class="col-md-5 d-flex flex-column justify-content-end pb-1">
             
             <div>
                 <p class="d-inline-block homepage-welcome lead mb-0">Welcome, {{ user.first_name }}.</p>
@@ -21,23 +21,23 @@
             </div>
         </div>
 
-        <div class="col-md-6 mt-3 d-flex flex-column align-items-end justify-content-center">
+        <div class="col-md-7 mt-3 d-flex flex-column align-items-end justify-content-center">
 
-            <div class="homepage-box mb-3 w-50 d-flex flex-column">
+            <div class="homepage-box mb-3 d-flex flex-column">
                 <img src="/static/images/booking_logo.png" alt="Booking Logo" width="20" height="35" class="d-inline-block me-2">
                 <span class="fs-5"><strong>Schedule your Session.</strong></span>
                 <span>Whether it may be the range or the fairway, we can also assign a coach or a caddie for you.</span>
                 <a href="/booking" class="btn bg-white text-black rounded d-inline-block"><strong>Book a Session</strong></a>
             </div>
 
-            <div class="homepage-box mb-3 w-50 d-flex flex-column">
+            <div class="homepage-box mb-3 d-flex flex-column">
                 <img src="/static/images/shop_logo.png" alt="Booking Logo" width="35" height="35" class="d-inline-block me-2">
                 <span class="fs-5"><strong>Purchase or Rent Items.</strong></span>
                 <span>Rented items should be returned after the session.</span>
                 <a href="/shop" class="btn bg-white text-black rounded d-inline-block"><strong>Shop Now</strong></a>
             </div>
 
-            <div class="homepage-box w-50 d-flex flex-column">
+            <div class="homepage-box d-flex flex-column">
                 <img src="/static/images/membership_logo.png" alt="Booking Logo" width="40" height="25" class="d-inline-block me-2">
                 <span class="fs-5"><strong>Be a Part of TeeTrack.</strong></span>
                 <span>We would like to see you in our community, enjoying discounted sessions.</span>
