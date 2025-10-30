@@ -58,6 +58,7 @@ body.homepage-background {
     padding: 1.5rem;
     border-radius: 1rem;
     height: 80%;
+    width: 300px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
