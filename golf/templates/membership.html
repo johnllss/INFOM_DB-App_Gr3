@@ -1,0 +1,35 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Membership
+{% endblock %}
+
+{% block main %}
+    <div class="text-center mb-5">
+        <h1><strong>Membership</strong> <em>plans</em></h1>
+    </div>
+
+    <div class="row justify-content-center g-4">
+        {% set memberships = [
+            {'name': 'Bronze', 'price': 10000, 'discount': 10, 'color': 'text-warning'},
+            {'name': 'Silver', 'price': 20000, 'discount': 15, 'color': 'text-secondary'},
+            {'name': 'Gold', 'price': 30000, 'discount': 20, 'color': 'text-warning-emphasis'},
+            {'name': 'Platinum', 'price': 40000, 'discount': 25, 'color': 'text-muted'},
+            {'name': 'Diamond', 'price': 50000, 'discount': 30, 'color': 'text-primary'}
+        ] %}
+        
+        {% for tier in memberships %}
+            <div class="col-md-4 col-lg-2">
+                <div class="card shadow-sm text-center h-100 border-0 rounded-4" style="background-color: #2e8b57">
+                    <div class="card-body text-white">
+                        <h4 class="{{ tier.color }}"><strong>{{ tier.name}}</strong></h4>
+                        <h5><strong>₱{{ "{:,.0f}".format(tier.price/1000) }}k</strong>/month</h5>
+                        
+                        <!-- Action can also be {{url_for('subscribe')}} for more dynamic routing-->
+                        <form action="{{ url_for('subscribe') }}"
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% endblock %}

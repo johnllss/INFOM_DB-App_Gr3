@@ -123,6 +123,12 @@ def homepage():
 @app.route("/membership", methods=["GET", "POST"])
 @login_required
 def membership():
+    return render_template("membership.html")
+
+    # return apology("67 error", 67)
+
+@app.route("/subscribe", methods=["POST"])
+def subscribe():
     return apology("67 error", 67)
 
 # Shop
