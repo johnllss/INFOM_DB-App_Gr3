@@ -41,13 +41,21 @@ def register():
         confirmation = request.form.get("confirmation")
 
         if not first_name or not last_name:
-            return apology("di mo naman nilagay pangalan mo sah", 400)
+            return apology("Input your first name and last name.", 400)
         elif not email:
-            return apology("aray ko sah mali naman", 400)
-        elif not password or not confirmation:
-            return apology("aray ko sah mali", 400)
+            return apology("Input your email.", 400)
+
+        cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+        cur.execute("SELECT * FROM user WHERE email = %s", (email,))
+        user = cur.fetchone()
+        cur.close()
+        if user:
+            return apology("Email already exists.", 400)
+        
+        if not password or not confirmation:
+            return apology("Input your password and its confirmation.", 400)
         if password != confirmation:
-            return apology("para ka namang kalaban mali password mo sa confirm mo", 400)
+            return apology("Password should match with confirmation.", 400)
 
         hash = generate_password_hash(password)
 
@@ -75,11 +83,11 @@ def login():
         password = request.form.get("password")
         # Ensure email was submitted
         if not email:
-            return apology("must provide email", 400)
+            return apology("Must provide email.", 400)
 
         # Ensure password was submitted
         elif not password:
-            return apology("must provide password", 400)
+            return apology("Must provide password.", 400)
 
         # Query database for email
         cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
@@ -88,7 +96,7 @@ def login():
         cur.close()
 
         if not user or not check_password_hash(user["hash"], password):
-            return apology("invalid email and/or password", 400)
+            return apology("Invalid email or password.", 400)
 
         # Remember which user has logged in
         session["user_id"] = user["user_id"]
