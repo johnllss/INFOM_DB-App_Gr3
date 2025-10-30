@@ -141,7 +141,7 @@ def cart():
 @app.route("/booking")
 @login_required
 def booking():
-    return apology("67 error", 67)
+    return render_template("booking.html")
 
 @app.route("/booking/fairway", methods=["GET", "POST"])
 @login_required
