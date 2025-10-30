@@ -1,5 +1,5 @@
-flask==3.0.3
-flask-session==0.5.0
-flask-mysqldb==1.0.1
-mysql-connector-python==9.0.0
-werkzeug==3.0.3
+flask
+flask-session
+flask-mysqldb
+mysql-connector-python
+werkzeug
