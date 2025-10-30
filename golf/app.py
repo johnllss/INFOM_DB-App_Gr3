@@ -7,16 +7,16 @@ from helpers import apology, login_required
 
 app = Flask(__name__)
 
+app.config["SESSION_PERMANENT"] = False
+app.config["SESSION_TYPE"] = "filesystem"
+Session(app)
+
 # MySQL Configuration
 app.config['MYSQL_HOST'] = 'bdxiyb8jgtmepmiynhz9-mysql.services.clever-cloud.com'
 app.config['MYSQL_USER'] = 'uhxxpvfj9cyz1zcv'
 app.config['MYSQL_PASSWORD'] = '3K27XZbrqzZMjW2o6btz'
 app.config['MYSQL_DB'] = 'bdxiyb8jgtmepmiynhz9'
 app.config['MYSQL_PORT'] = 3306
-
-app.config["SESSION_PERMANENT"] = False
-app.config["SESSION_TYPE"] = "filesystem"
-Session(app)
 
 mysql = MySQL(app)
 
@@ -29,13 +29,6 @@ def after_request(response):
     return response
 
 # ROUTING
-@app.route("/dbtest")
-def dbtest():
-    cur = mysql.connection.cursor()
-    cur.execute("SELECT DATABASE();")
-    dbname = cur.fetchone()
-    cur.close()
-    return f"Connected to database: {dbname[0]}"
 
 # Register
 @app.route("/register", methods=["GET", "POST"])
@@ -47,18 +40,20 @@ def register():
         password = request.form.get("password")
         confirmation = request.form.get("confirmation")
 
-        if not email:
-            return apology("aray ko sah mali naman", 67)
+        if not first_name or not last_name:
+            return apology("di mo naman nilagay pangalan mo sah", 400)
+        elif not email:
+            return apology("aray ko sah mali naman", 400)
         elif not password or not confirmation:
-            return apology("aray ko sah mali", 67)
+            return apology("aray ko sah mali", 400)
         if password != confirmation:
-            return apology("para kang kalaban", 67)
+            return apology("para ka namang kalaban mali password mo sa confirm mo", 400)
 
         hash = generate_password_hash(password)
 
         cur = mysql.connection.cursor()
         cur.execute("INSERT INTO user (first_name, last_name, email, hash) VALUES (%s, %s, %s, %s)",
-            ("Gab", "Espineli", email, hash))
+            (first_name, last_name, email, hash))
         mysql.connection.commit()
         cur.close()
 
@@ -88,15 +83,12 @@ def login():
 
         # Query database for email
         cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-        cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
         cur.execute("SELECT * FROM user WHERE email = %s", (email,))
         user = cur.fetchone()
         cur.close()
 
         if not user or not check_password_hash(user["hash"], password):
             return apology("invalid email and/or password", 400)
-
-        session["user_id"] = user["user_id"]
 
         # Remember which user has logged in
         session["user_id"] = user["user_id"]
@@ -112,7 +104,12 @@ def login():
 @app.route("/")
 @login_required
 def homepage():
-    return apology("67 error", 67)
+    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cur.execute("SELECT first_name FROM user WHERE user_id = %s", (session["user_id"],))
+    first_name = cur.fetchone()
+    cur.close()
+
+    return render_template("home.html", user=first_name)
 
 # Membership -> Cart Checkout
 @app.route("/membership", methods=["GET", "POST"])

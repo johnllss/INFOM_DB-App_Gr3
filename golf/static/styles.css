@@ -11,10 +11,9 @@ em {
   font-style: italic;
 }
 
-/* Size for brand */
 nav .navbar-brand
 {
-    font-size: x-large;
+  font-size: x-large;
 }
 
 .btn-green {
@@ -30,47 +29,41 @@ nav .navbar-brand
 }
 
 a {
-      color: #2e944b;
-      text-decoration: none;
-    }
+  color: #2e944b;
+  text-decoration: none;
+  }
 
 a:hover {
   color: #267a3e;
   text-decoration: underline;
 }
 
-table {
-  background-color: transparent;
-  margin-bottom: 1rem;
-  width: 100%;
-  border-collapse: collapse;
-}
-
-table th,
-table td {
-  padding: 0.75rem;
-  vertical-align: middle;
-  border-bottom: 1px solid #eee;
-}
-
-thead th:first-child,
-tbody td:first-child,
-tfoot td:first-child {
-  text-align: left;
-}
-
-thead th:not(:first-child),
-tbody td:not(:first-child),
-tfoot td:not(:first-child) {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-
-thead th { background: #f8f9fa; font-weight: 600; }
-tbody tr:nth-child(even) { background: #fafafa; }
-
 #image-side {
-    background: url('/static/gab_cameo.png') no-repeat center center; 
-    background-size: cover;
+  background: url('/static/images/gab_cameo.png') no-repeat center center; 
+  background-size: cover;
+}
+
+body.homepage-background {
+  background-image: linear-gradient(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1)), url('/static/images/homepage_backdrop.png');
+  background-attachment: fixed;
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+}
+
+.homepage-box {
+    background-color: #2e944b;
+    
+    color: #ffffff;
+    padding: 1.5rem;
+    border-radius: 1rem;
+    height: 80%;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.homepage-welcome {
+  background-color: #2e944b;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 10px;
 }
