@@ -129,9 +129,9 @@ def membership():
 @app.route("/subscribe", methods=["POST"])
 @login_required
 def subscribe():
-    tier = request.form.get("tier")
-
-    # Subscribe the user
+    if request.method == "POST":
+        tier = request.form.get("tier")
+        return render_template("subscribe.html")
 
     return redirect("membership")
 
