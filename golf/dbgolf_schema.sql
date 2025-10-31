@@ -109,3 +109,49 @@ CREATE TABLE payment (
 );
 
 SET FOREIGN_KEY_CHECKS = 1;
+
+DELIMITER //
+
+CREATE TRIGGER update_items_price_after_insert
+AFTER INSERT ON item
+FOR EACH ROW 
+BEGIN
+    UPDATE cart
+    SET total_price = (
+        SELECT COALESCE(SUM(price * quantity), 0)
+        FROM item
+        WHERE cart_id = NEW.cart_id
+    )
+    WHERE cart_id = NEW.cart_id;
+END;
+//
+
+CREATE TRIGGER update_items_price_after_update
+AFTER UPDATE ON item
+FOR EACH ROW 
+BEGIN
+    UPDATE cart
+    SET total_price = (
+        SELECT COALESCE(SUM(price * quantity), 0)
+        FROM item
+        WHERE cart_id = NEW.cart_id
+    )
+    WHERE cart_id = NEW.cart_id;
+END;
+//
+
+CREATE TRIGGER update_items_price_after_delete
+AFTER DELETE ON item
+FOR EACH ROW 
+BEGIN
+    UPDATE cart
+    SET total_price = (
+        SELECT COALESCE(SUM(price * quantity), 0)
+        FROM item
+        WHERE cart_id = OLD.cart_id
+    )
+    WHERE cart_id = OLD.cart_id;
+END;
+//
+
+DELIMITER ;
