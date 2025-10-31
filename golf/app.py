@@ -206,7 +206,13 @@ def add_subscription_to_cart():
 @app.route("/shop", methods=["GET", "POST"])
 @login_required
 def shop():
-    return apology("67 error", 67)
+    items = [
+        {"id": 1, "name": "HONMA Driver 67y", "price": 67},
+        {"id": 2, "name": "HONMA Driver 67y", "price": 67},
+        {"id": 3, "name": "HONMA Driver 67y", "price": 67},
+    ]
+    cart_items = items[:67]  # Example count
+    return render_template("shop.html", items=items, cart_items=cart_items)
 
 # Cart Checkout
 @app.route("/cart", methods=["GET", "POST"])

@@ -1,0 +1,42 @@
+<div class="p-3 bg-success text-white rounded-3">
+  <!-- Search -->
+  <form action="/shop" method="GET" class="d-flex mb-3">
+    <input type="text" name="q" placeholder="Search" class="form-control me-2">
+    <button type="submit" class="btn btn-light"><i class="bi bi-search"></i></button>
+  </form>
+
+  <!-- Filters -->
+  <h5>Filters</h5>
+
+  <div class="mb-3">
+    <strong>Item Type</strong>
+    <div class="form-check">
+      <input class="form-check-input" type="radio" name="type" id="type-all" value="all" checked>
+      <label class="form-check-label" for="type-all">All</label>
+    </div>
+    <div class="form-check">
+      <input class="form-check-input" type="radio" name="type" id="type-sales" value="sales">
+      <label class="form-check-label" for="type-sales">Sales</label>
+    </div>
+    <div class="form-check">
+      <input class="form-check-input" type="radio" name="type" id="type-rentals" value="rentals">
+      <label class="form-check-label" for="type-rentals">Rentals</label>
+    </div>
+  </div>
+
+  <div class="mb-3">
+    <strong>Item Category</strong>
+    {% for category in ['All', 'Golf Clubs', 'Golf Bags', 'Tees & Balls', 'Miscellaneous'] %}
+      <div class="form-check">
+        <input class="form-check-input" type="radio" name="category" id="cat-{{ loop.index }}" value="{{ category|lower }}">
+        <label class="form-check-label" for="cat-{{ loop.index }}">{{ category }}</label>
+      </div>
+    {% endfor %}
+  </div>
+
+  <!-- Cart Summary -->
+  <div class="mt-4">
+    <h6>My Cart</h6>
+    <a href="/checkout" class="btn btn-light w-100"><strong>Checkout ({{ cart_items|length }} items)</strong></a>
+  </div>
+</div>
