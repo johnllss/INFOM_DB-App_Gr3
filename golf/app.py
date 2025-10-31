@@ -255,11 +255,11 @@ def get_user_discount(user_id):
     user = cur.fetchone()
     cur.close
 
-    # 0 discount if not a user or membership has ended
+    # 0 discount if not a user or membership_end is empty
     if not user or not user['membership_end']:
         return 0
     
-    # 
+    # 0 discount if membership has ended
     if user['membership_end'] < datetime.now().date():
         return 0
     

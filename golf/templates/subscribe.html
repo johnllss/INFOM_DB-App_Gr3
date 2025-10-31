@@ -5,13 +5,13 @@
 {% endblock %}
 
 {% block main %}
-    <div class="text-left ms-md-5 me-md-5 mt-5 mb-5">
+    <div class="text-left ms-5 me-5 mt-5 mb-2">
         <h1 style="font-size: 70px;"><strong>Subscription Confirmation</strong></h1>
-        <p class="lead">You are about to subscribe to the <strong style="color: {{ color }};">{{ tier }}</strong> membership</p>
+        <p class="lead mt-5 text-center">You are about to subscribe to the <strong style="color: {{ color }};">{{ tier }}</strong> membership</p>
     </div>
 
     <div class="container" style="max-width: 600px;">
-        <div class="card shadow-lg border-0 round-4">
+        <div class="card shadow-lg border-0 round-4 px-5 py-5">
             <div class="mb-4">Subscription Details</div>
 
             <div class="mb-3">
@@ -27,8 +27,16 @@
                 <strong>Duration:</strong>
                 <select name="months" id="months" class="form-select" onchange="updateTotal()">
                     <option value="1">1 Month</option>
+                    <option value="2">2 Month</option>
                     <option value="3">3 Month</option>
+                    <option value="4">4 Month</option>
+                    <option value="5">5 Month</option>
                     <option value="6">6 Month</option>
+                    <option value="7">7 Month</option>
+                    <option value="8">8 Month</option>
+                    <option value="9">9 Month</option>
+                    <option value="10">10 Month</option>
+                    <option value="11">11 Month</option>
                     <option value="12">12 Month</option>
                 </select>
             </div>
@@ -42,18 +50,8 @@
                 <input type="hidden" name="discount" value="{{ discount }}">
                 <input type="hidden" id="months_input" name="months" value="1">
 
-                <div class="mb-3">
-                    <label for="payment_method" class="form-label"><strong>Payment Method:</strong></label>
-                    <select name="payment_method" id="payment_method" class="form-select" required>
-                        <option value="">Select your payment method.</option>
-                        <option value="Cash">Cash</option>
-                        <option value="GCash">GCash</option>
-                        <option value="Credit Card">Credit Card</option>
-                    </select>
-                </div>
-
                 <div class="d-grid gap-2">
-                    <button type="submit" class="btn btn-success btn-lg">Confirm Subscription</button>
+                    <button type="submit" class="btn btn-success btn-lg">Add  Subscription To Cart</button>
                     <a href="/membership" class="btn btn-secondary">Cancel</a>
                 </div>
             </form>
