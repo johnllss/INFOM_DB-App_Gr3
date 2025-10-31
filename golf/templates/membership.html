@@ -10,14 +10,6 @@
     </div>
 
     <div class="mx-md-4 row justify-content-center g-4 h-100" style="min-height: 70vh;">
-        {% set memberships = [
-            {'name': 'Bronze', 'price': 10000, 'discount': 10, 'color': '#d48926'},
-            {'name': 'Silver', 'price': 20000, 'discount': 15, 'color': '#e8e8e8'},
-            {'name': 'Gold', 'price': 30000, 'discount': 20, 'color': '#ffd600'},
-            {'name': 'Platinum', 'price': 40000, 'discount': 25, 'color': '#cbcbcb'},
-            {'name': 'Diamond', 'price': 50000, 'discount': 30, 'color': '#44b0ff'}
-        ] %}
-        
         {% for tier in memberships %}
             <div class="col-md-4 col-lg-2">
                 <div class="card shadow-sm text-center h-100 border-0 rounded-4 mx-2" style="background-color: #2e8b57">

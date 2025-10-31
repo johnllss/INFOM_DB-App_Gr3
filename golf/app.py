@@ -29,6 +29,15 @@ def after_request(response):
     response.headers["Pragma"] = "no-cache"
     return response
 
+# MEMBERSHP FIXED VALUES
+MEMBERSHIPS = {
+    'Bronze': {'price': 10000, 'discount': 10, 'color': '#d48926'},
+    'Silver': {'price': 20000, 'discount': 15, 'color': '#e8e8e8'},
+    'Gold': {'price': 30000, 'discount': 20, 'color': '#ffd600'},
+    'Platinum': {'price': 40000, 'discount': 25, 'color': '#cbcbcb'},
+    'Diamond': {'price': 50000, 'discount': 30, 'color': '#44b0ff'}
+}
+
 # ROUTING
 
 # Register
@@ -123,7 +132,14 @@ def homepage():
 @app.route("/membership", methods=["GET", "POST"])
 @login_required
 def membership():
-    return render_template("membership.html")
+
+    # Convert dict to list to be passed onto membership page
+    membership_list = [
+        {'name': name, **details}
+        for name, details in MEMBERSHIPS.items()
+    ]
+
+    return render_template("membership.html", memberships=membership_list)
 
 # Subscribe (Clicks from Membership)
 @app.route("/subscribe", methods=["POST"])
@@ -132,20 +148,13 @@ def subscribe():
     if request.method == "POST":
         tier = request.form.get("tier")
         
-        # Backend definition of membership tiers
-        memberships = {
-            'Bronze': {'price': 10000, 'discount': 10, 'color': '#d48926'},
-            'Silver': {'price': 20000, 'discount': 15, 'color': '#e8e8e8'},
-            'Gold': {'price': 30000, 'discount': 20, 'color': '#ffd600'},
-            'Platinum': {'price': 40000, 'discount': 25, 'color': '#cbcbcb'},
-            'Diamond': {'price': 50000, 'discount': 30, 'color': '#44b0ff'}
-        }
-        
-        if tier not in memberships:
+        if tier not in MEMBERSHIPS:
             return apology("Invalid membership tier.", 400)
+        
+        membership_info = MEMBERSHIPS[tier]
 
         # Backend membership details passing to /subscribe page
-        return render_template("subscribe.html", tier=tier, price=memberships[tier]['price'], discount=memberships[tier]['discount'], color=memberships[tier]['color'])
+        return render_template("subscribe.html", tier=tier, price=membership_info['price'], discount=membership_info['discount'], color=membership_info['color'])
 
     return redirect("/membership")
 
@@ -248,7 +257,7 @@ def get_user_discount(user_id):
     if not user or not user['membership_end']:
         return 0
     
-    if user['membership_end'] < datetime.now().date:
+    if user['membership_end'] < datetime.now().date():
         return 0
     
     discounts = {
