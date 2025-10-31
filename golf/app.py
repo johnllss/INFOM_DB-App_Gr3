@@ -4,8 +4,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from flask_mysqldb import MySQL
 import MySQLdb.cursors
 from datetime import datetime, timedelta
-from helpers import apology, login_required
-
+from helpers import apology, login_required, php
 app = Flask(__name__)
 
 app.config["SESSION_PERMANENT"] = False
@@ -271,18 +270,75 @@ def checkout():
             return render_template("purchased.html", message=message)
     else:
         cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+        # MEMBERSHIP HANDLING
 
-        # Check if a session is booked (session_user is not null)
+        # SESSION_USER HANDLING
         cur.execute("SELECT session_user_id FROM payment WHERE user_id = %s", (session["user_id"],))
-        if cur.rowcount == 0:
-            session_price = 0
-        else:
-            cur.execute("SELECT session_user_id FROM payment WHERE user_id = %s", (session["user_id"],))
+        session_user = cur.fetchone()
+
+        session_price = 0
+        staff_price = 0
+
+        if session_user and session_user["session_user_id"]:
+            session_user_id = session_user["session_user_id"]
+
+            # if user booked for a pending session
+            cur.execute("""
+                SELECT gs.session_price AS price
+                FROM golf_session gs
+                JOIN session_user su ON gs.session_id = su.session_id
+                WHERE su.session_user_id = %s
+            """, (session_user_id,))
+            golf_session = cur.fetchone()
+
+            if golf_session:
+                session_price = golf_session["price"]
+
+                # if driving range, check buckets ordered
+                cur.execute("""
+                    SELECT buckets
+                    FROM session_user
+                    WHERE session_user_id = %s
+                """, (session_user_id,))
+                buckets = cur.fetchone()
+
+                if buckets and buckets["buckets"] != 0:
+                    session_price += buckets["buckets"] * 300
+
+            # if user asked for a staff
+            cur.execute("""
+                SELECT staff_id
+                FROM session_user
+                WHERE session_user_id = %s
+            """, (session_user_id,))
+            staff = cur.fetchone()
+
+            if staff and staff["staff_id"]:
+                cur.execute("SELECT service_fee FROM staff WHERE staff_id = %s", (staff["staff_id"],))
+                staff = cur.fetchone()
+                if staff:
+                    staff_price = staff["service_fee"]
+            
+        # CART HANDLING
+        cart_price = 0
+        cur.execute("""
+                SELECT total_price
+                FROM cart
+                WHERE user_id = %s
+            """, (session["user_id"],))
+        cart = cur.fetchone()
+
+        if cart and staff["total_price"]:
+            cart_price += cart["total_price"]
+
         cur.close()
 
+        # Now you have:
+        total_session_cost = session_price + staff_price
+
         # Check if a cart has items (cart_id in items table is not null)
-        return render_template("checkout.html")
-                               #membership=membership_price, session_price=session_price, cart_price=cart_price)
+        return render_template("checkout.html", p_cart=php(cart_price), p_session=php(total_session_cost))
+
 
 @app.route("/logout")
 def logout():
