@@ -1,0 +1,98 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Checkout
+{% endblock %}
+
+{% block main %}
+<div class="container">
+    <h1 class="my-5"><strong>Checkout</strong></h1>
+    <div class="row">
+        <div class="col-md-5 d-flex flex-column gap-3">
+            <div class="d-flex">
+                <div>Membership Fee</div>
+                <div class="ms-auto"><strong>P67</strong></div>
+            </div>
+            <div class="d-flex">
+                <div>Session Total Fee</div>
+                <div class="ms-auto"><strong>P67</strong></div>
+            </div>
+            <div class="d-flex">
+                <div>Cart Total Fee</div>
+                <div class="ms-auto"><strong>P67</strong></div>
+            </div>
+
+            <hr class="my-2">
+
+            <div class="d-flex">
+                <span class="fs-5">Sub Total</span>
+                <div class="fs-5 ms-auto"><strong>P67</strong></div>
+            </div>
+
+            <hr class="my-2">
+
+            <div class="d-flex">
+                <div>Membership Discount {Member}</div>
+                <div class="ms-auto"><strong>-P67</strong></div>
+            </div>
+            <div class="d-flex">
+                <div>Loyalty Points Discount {67 pts}</div>
+                <div class="ms-auto"><strong>-P67</strong></div>
+            </div>
+
+            <hr class="my-2">
+
+            <div class="d-flex">
+                <span class="fs-4"><strong>Total</strong></span>
+                <div class="fs-4 ms-auto"><strong>P67</strong></div>
+            </div>
+
+
+        </div>
+
+        <div class="col-auto d-flex"> <div class="vr py-5"></div> </div>
+            
+        <div class="col-md-6 d-flex flex-column gap-1">
+            <form method="POST" action="/checkout" class="d-flex gap-2">
+                <button type="submit" name="method" value="cash" class="btn flex-fill border rounded text-center fs-5"><strong>Cash</strong></button>
+                <button type="submit" name="method" value="gcash" class="btn flex-fill border rounded text-center fs-5">
+                    <img src="/static/images/gcash_logo.png" alt="Booking Logo" width="90" height="23" class="d-inline-block me-2">
+                </button>
+            </form>
+
+            <hr class="my-2">
+
+            <div class="d-flex flex-column">
+                <span class="fs-5"><strong>Credit Card</strong></span>
+                <span class="fs-7">Enter your card details below.</span>
+            </div>
+
+            <div class="d-flex flex-column gap-3">
+                <div d-flex flex-column>
+                    <span class="fs-7">Name on card</span>
+                    <input autocomplete="off" autofocus class="form-control" name="name" placeholder="Enter your name" type="text">
+                </div>
+                <div d-flex flex-column>
+                    <span class="fs-7">Card Number</span>
+                    <input autocomplete="off" autofocus class="form-control" name="c_num" placeholder="Enter your card number" type="text">
+                </div>
+                <div class="d-flex gap-2">
+                    <div class="d-flex flex-fill flex-column">
+                        <span class="fs-7">Expiry Date</span>
+                        <input autocomplete="off" autofocus class="form-control" name="exp_date" placeholder="MM/YY" type="text">
+                    </div>
+                    <div class="d-flex flex-fill flex-column">
+                        <span class="fs-7">CVV</span>
+                        <input autocomplete="off" autofocus class="form-control" name="cvv" placeholder="e.g. 123" type="text">
+                    </div>
+                </div>
+                <form method="POST" action="/checkout" class="d-flex flex-column">
+                    <button type="submit" name="method" value="card" class="btn flex-fill homepage-welcome text-center fs-5"><strong>Complete Payment</strong></button>
+                </form>
+            </div>
+
+        </div>
+
+    </div>
+</div>
+{% endblock %}

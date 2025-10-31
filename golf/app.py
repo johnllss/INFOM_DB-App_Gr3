@@ -45,7 +45,7 @@ def register():
         elif not email:
             return apology("Input your email.", 400)
 
-        cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+        cur = mysql.connection.cursor()
         cur.execute("SELECT * FROM user WHERE email = %s", (email,))
         user = cur.fetchone()
         cur.close()
@@ -164,6 +164,34 @@ def range():
 @login_required
 def account():
     return apology("67 error", 67)
+
+# Checkout (where all payments are settled)
+@app.route("/checkout", methods=["GET", "POST"])
+@login_required
+def checkout():
+    if request.method == "POST":
+        payment_method = request.form.get("method")
+
+        if payment_method == "cash":
+            message = "Pass in the cash to the assigned counter."
+            return render_template("purchased.html", message=message)
+        if payment_method == "gcash":
+            message = "Your balance in GCash has been deducted from your payment."
+            return render_template("purchased.html", message=message)
+        if payment_method == "card":
+            card_name = request.form.get("name")
+            card_number = request.form.get("c_num")
+            expiry_date = request.form.get("exp_date")
+            cvv = request.form.get("cvv")
+
+            if not (card_name and card_number and expiry_date and cvv):
+                return apology("Fill in the complete card details.", 67)
+
+            message = "Your balance in your card has been deducted from your payment."
+            return render_template("purchased.html", message=message)
+    else:
+        
+        return render_template("checkout.html")
 
 @app.route("/logout")
 def logout():

@@ -41,3 +41,7 @@ def login_required(f):
         return f(*args, **kwargs)
 
     return decorated_function
+
+def php(value):
+    """Format value as PHP."""
+    return f"₱{value:,.2f}"
