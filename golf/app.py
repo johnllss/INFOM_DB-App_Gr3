@@ -158,6 +158,51 @@ def subscribe():
 
     return redirect("/membership")
 
+@app.route("/subscribe/add_subscription_to_cart", methods=["POST"])
+@login_required
+def add_subscription_to_cart():
+    tier = request.form.get("tier")
+    price = int(request.form.get("price", 0))
+    months = int(request.form.get("months", 0))
+
+    if not tier or price <= 0:
+        return apology("Invalid subscription details.", 400)
+
+    total_price = price * months
+
+    cur = mysql.connection.cursor()
+    # Check if user has a cart
+    cur.execute("SELECT cart_id FROM cart WHERE user_id = %s", (session["user_id"],))
+    cur = cur.fetchone()
+
+    if not cart:
+        cur.execute("INSERT INTO cart (user_id, total_price) VALEUS (%s, 0)", session["user_id"],)
+        mysql.connection.commit()
+        cart_id = cur.lastrowid
+    else:
+        cart_id = cart["cart_id"]
+
+    # Check if user has already added a membership to cart
+    cur.execute("SELECT * FROM item WHERE cart_id = %s AND name LIKE '%Membership%'", (cart_id,))
+    membership_in_cart = cur.fetchone()
+
+    membership_name = f"{tier} Membership ({months} month{'s' if months > 1 else ''})"
+
+    if membership_in_cart:
+    # Replace the one in cart with recently clicked membership tier
+        cur.execute("UPDATE item SET name = %s, price = %s, quantity = 1 WHERE item_id = %s", (membership_name, total_price, membership_in_cart["item_id"]))
+    else:
+    # Add the recently clicked membership tier to cart
+        cur.execute("INSERT INTO item (name, type, quantity, price, cart_id) VALUES (%s, 'Sale', 1, %s, %s)", (membership_name, total_price, cart_id))
+
+    # Update cart's total price
+    cur.execute("UPDATE cart SET total_price = (SELECT COALESCE(SUM(price), 0) FROM item WHERE cart_id = %s) WHERE cart_id = %s", (cart_id, cart_id))
+
+    mysql.connection.commit()
+    cur.close()
+
+    return redirect("/cart")
+
 # Shop
 @app.route("/shop", methods=["GET", "POST"])
 @login_required
@@ -190,7 +235,15 @@ def range():
 @app.route("/account")
 @login_required
 def account():
-    return render_template("account.html")
+    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cur.execute("SELECT first_name, last_name FROM user WHERE user_id = %s", (session['user_id'],))
+    user = cur.fetchone()
+    cur.close()
+
+    first_name = user['first_name']
+    last_name = user['last_name']
+
+    return render_template("account.html", first_name=first_name, last_name=last_name)
 
 # Checkout (where all payments are settled)
 @app.route("/checkout", methods=["GET", "POST"])
@@ -243,6 +296,8 @@ def logout():
 
 
 
+
+
 # Local helper function
 def get_user_discount(user_id):
     """
@@ -251,7 +306,7 @@ def get_user_discount(user_id):
 
     # Get necessary values for processing
     cur = mysql.connection.cursor(MySQL.cursors.DictCursor)
-    cur.execute("SELECT membership_tier, membership_end FROM user WHERE user_id = %s", (user_id))
+    cur.execute("SELECT membership_tier, membership_end FROM user WHERE user_id = %s", (session["user_id"],))
     user = cur.fetchone()
     cur.close
 

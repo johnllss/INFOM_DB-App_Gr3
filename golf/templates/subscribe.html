@@ -44,7 +44,7 @@
                 <h4>Total: ₱<span id="total">{{ "{{:,.0f}}".format(price/1000) }}</span>k</h4>
             </div>
 
-            <form action="" method="post">
+            <form action="/subscribe/add_subscription_to_cart" method="post">
                 <input type="hidden" name="tier" value="{{ tier }}">
                 <input type="hidden" name="price" value="{{ price }}">
                 <input type="hidden" name="discount" value="{{ discount }}">
@@ -60,7 +60,7 @@
 
     <script>
         function updateTotal() {
-            const months = parstInt(document.getElementById('months').value);
+            const months = parseInt(document.getElementById('months').value);
             const basePrice = {{ price }};
             const total = (basePrice * months) / 1000;
             document.getElementById('total').textContent = total.toLocaleString('en-US', {maximumFractionDigits: 0});
