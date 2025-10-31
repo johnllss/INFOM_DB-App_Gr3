@@ -18,7 +18,7 @@
                 <strong>Tier:</strong> {{ tier }}
             </div>
             <div class="mb-3">
-                <strong>Monthly Price: </strong> ₱{{ "{{:,.0f}}".format(price/1000) }} k
+                <strong>Monthly Price: </strong>₱{{ "{:,.0f}".format(price/1000) }}k
             </div>
             <div class="mb-3">
                 <strong>Discount on Sessions:</strong> {{ discount }}%
@@ -41,7 +41,7 @@
                 </select>
             </div>
             <div class="mb-4">
-                <h4>Total: ₱<span id="total">{{ "{{:,.0f}}".format(price/1000) }}</span>k</h4>
+                <h4>Total: ₱<span id="total">{{ "{:,.0f}".format(price/1000) }}</span>k</h4>
             </div>
 
             <form action="/subscribe/add_subscription_to_cart" method="post">

@@ -5,5 +5,114 @@
 {% endblock %}
 
 {% block main %}
-    <h1><strong>{{ first_name }} {{ last_name }}</strong></h1>
+<div class="container mt-5">
+    <div>
+        <h1><strong>{{ first_name }} {{ last_name }}</strong></h1>
+    </div>
+
+    <div>
+        <h2><!--{{ tier_name }}--> Diamond Member </h2>
+        <p>Loyalty Points: <!--{{ loyaly_points }}--> 67</p>
+    </div>
+
+    <div>
+        <h3>Game Statistics</h3>
+
+        <div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Record</th>
+                        <th>Metric</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Longest Driving Range:</td>
+                        <td><!-- {{ yards }} --> 6677 yards</td>
+                        <td><!-- {{ date }}--> 09-07-25</td>
+                    </tr>
+                    <tr>
+                        <td>Highest Fairway Score:</td>
+                        <td><!-- {{ score }} --> 67</td>
+                        <td><!-- {{ date }}--> 09-07-25</td>
+                    </tr>
+                    <tr>
+                        <td>Months Subscribed:</td>
+                        <td><!-- {{ months }} --> 6677 months</td>
+                        <td><!-- {{ date }}--> 09-07-25</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div>
+        <h4>Fairway</h4>
+
+        <div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Holes</th>
+                        <th>Score</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>9 Holes</td>
+                        <td><!-- {{ score }} --> 67</td>
+                        <td><!-- {{ date }}--> 09-07-25</td>
+                    </tr>
+                    <tr>
+                        <td>9 Holes</td>
+                        <td><!-- {{ score }} --> 67</td>
+                        <td><!-- {{ date }}--> 09-07-25</td>
+                    </tr>
+                    <tr>
+                        <td>9 Holes</td>
+                        <td><!-- {{ months }} --> 6677 </td>
+                        <td><!-- {{ date }}--> 09-07-25</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div>
+        <h4>Driving Range</h4>
+
+        <div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Buckets</th>
+                        <th>Range</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>67 Sets</td>
+                        <td><!-- {{ score }} --> 67 yards</td>
+                        <td><!-- {{ date }}--> 09-07-25</td>
+                    </tr>
+                    <tr>
+                        <td>67 Sets</td>
+                        <td><!-- {{ score }} --> 67 yards</td>
+                        <td><!-- {{ date }}--> 09-07-25</td>
+                    </tr>
+                    <tr>
+                        <td>67 Sets</td>
+                        <td><!-- {{ months }} --> 6677 yards</td>
+                        <td><!-- {{ date }}--> 09-07-25</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
