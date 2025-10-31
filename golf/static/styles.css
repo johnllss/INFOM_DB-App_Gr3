@@ -124,3 +124,111 @@ body.homepage-background {
 .bi-search {
   color: #2e944b !important;
 }
+
+.booking-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  font-size: 24px;
+}
+
+.booking-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+#date-selector {
+  width: 300px;
+  height: 80px; 
+  text-align: center;
+  border: 1px solid #000000;
+  border-radius: 20px;
+  background-color: white;
+  
+  
+  font-size: 40px;
+  font-weight: bold;
+  color: #000000;
+  position: relative;
+}
+
+#date-selector::-webkit-calendar-picker-indicator {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+    
+  opacity: 0;
+  z-index: 1; 
+  cursor: pointer;
+}
+
+.booking-selector {
+    width: 300px;
+    height: 80px; 
+    text-align: center;
+    border: 1px solid #000000;
+    border-radius: 20px;
+    background-color: white;
+    appearance: none;
+    
+    font-size: 40px;
+    font-weight: bold;
+    color: #000000;
+    cursor: pointer;
+}
+
+hr {  
+    background-color: #000000; 
+    height: 2px;
+    margin-left: 3rem;
+}
+
+.btn-counter {
+    background-color: #2e944b; 
+    color: white;
+    border: none;
+    border-radius: 50%; 
+    width: 40px;
+    height: 40px;
+    
+    font-size: 24px;
+    color: white;
+    cursor: pointer;
+}
+
+.count-container {
+  display: flex;
+  align-items: center;
+  flex-direction: row;
+}
+
+.display-count {
+  text-align: center; 
+  font-size: 40px; 
+  font-weight: bold;
+  color: #000;
+  
+  
+  background: transparent;
+  outline: none;
+    
+  /* Spacing and dimension */
+  width: 80px; 
+  margin: 0 10px; /* Space between number and buttons */
+}
+
+.staff-selector {
+    width: 700px;
+    height: 80px; 
+    text-align: center;
+    border: 1px solid #000000;
+    border-radius: 20px;
+    background-color: white;
+    appearance: none;
+    
+    font-size: 40px;
+    font-weight: bold;
+    color: #000000;
+    cursor: pointer;
+}
