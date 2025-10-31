@@ -1,0 +1,102 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Range
+{% endblock %}
+
+{% block main %}
+    <div class="container-fluid">
+        <div class="row">
+            <h1 class="text-left display-3 fw-bold mt-4 mb-5 ms-5">
+                Booking Fairway
+            </h1>
+            <div class="col-md-7">
+                <div class="booking-container ms-5">
+                    
+                    <div class="booking-wrapper">
+                        <label for="date-selector">Date:</label>
+                        <input type="date" id="date-selector" name="booking-date">
+                    </div>
+                    
+                
+                    <div class="booking-wrapper">
+                        <label for="time-selector">Time:</label>
+                        <select class="booking-selector" name="booking-time">
+                            <option value="09:00">7:00 AM</option>
+                            <option value="10:30">9:00 AM</option>
+                            <option value="13:00">11:00 AM</option>
+                            <option value="17:00">1:00 PM</option>
+                            <option value="19:30">3:00 PM</option>
+                        </select>
+                    </div>
+
+                
+                    <p class="text-left display-5 fw-bold">
+                        AVAILABLE
+                    </p>
+                
+                </div>
+                <div class="booking-wrapper ms-5">
+                    <label for="hole-selector">Holes:</label>
+                    <select class="booking-selector" name="booking-hole">
+                        <option value="1">FULL 18</option>
+                        <option value="2">9 BACK</option>
+                        <option value="3">9 FRONT</option>
+                    </select>
+                </div>
+
+            <hr>
+
+            </div>
+
+            <div class="col-md-7">
+                <div class="booking-container ms-5">
+                    <div class="booking-wrapper">
+                        <label for="coach-selector">Coach:</label>
+                        <select class="staff-selector" name="booking-coach">
+                            <option value="1">Jose Gabriel Espineli</option>
+                            <option value="2">Jerry King Deveza</option>
+                            <option value="3">John Lloyd Sunga</option>
+                            <option value="4">Ronald Gabriel Leoncio</option>
+                        </select>
+                    </div>
+
+                
+                    <p class="text-left display-5 fw-bold mt-4">
+                        AVAILABLE
+                    </p>
+                
+                </div>
+
+            <hr>
+
+            </div>
+
+            <div class="col-md-7">
+                <div class="booking-container ms-5">
+                    <div class="booking-wrapper">
+                        <label for="coach-selector">Caddie:</label>
+                        <select class="staff-selector" name="booking-coach">
+                            <option value="1">Jose Gabriel Espineli</option>
+                            <option value="2">Jerry King Deveza</option>
+                            <option value="3">John Lloyd Sunga</option>
+                            <option value="4">Ronald Gabriel Leoncio</option>
+                        </select>
+                    </div>
+
+                
+                    <p class="text-left display-5 fw-bold mt-4">
+                        AVAILABLE
+                    </p>
+                
+                </div>
+
+            <hr>
+
+            </div>
+
+
+        </div>
+    </div>
+    
+{% endblock %}  
