@@ -190,7 +190,7 @@ def range():
 @app.route("/account")
 @login_required
 def account():
-    return apology("67 error", 67)
+    return render_template("account.html")
 
 # Checkout (where all payments are settled)
 @app.route("/checkout", methods=["GET", "POST"])
