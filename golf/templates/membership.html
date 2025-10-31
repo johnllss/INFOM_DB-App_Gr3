@@ -6,10 +6,10 @@
 
 {% block main %}
     <div class="text-center mt-5 mb-5">
-        <h1><strong>Membership</strong> <em>plans</em></h1>
+        <h1 style="font-size: 70px;"><strong>Membership</strong> <em>plans</em></h1>
     </div>
 
-    <div class="mx-md-4 row justify-content-center g-4 h-100" style="min-height: 70vh">
+    <div class="mx-md-4 row justify-content-center g-4 h-100" style="min-height: 70vh;">
         {% set memberships = [
             {'name': 'Bronze', 'price': 10000, 'discount': 10, 'color': '#d48926'},
             {'name': 'Silver', 'price': 20000, 'discount': 15, 'color': '#e8e8e8'},
@@ -27,7 +27,7 @@
                         
                         <form action="/subscribe" method="post">
                             <input name="tier" type="hidden" value="{{ tier.name }}">
-                            <button class="btn btn-light fw-semibold mt-2 px-4" type="submit">Subscribe</button> 
+                            <button class="btn btn-light fw-semibold mt-2 px-4" type="submit">Choose Tier</button> 
                         </form>
 
                         <ul class="list-unstyled mt-3">
