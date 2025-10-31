@@ -249,23 +249,24 @@ def get_user_discount(user_id):
     Retrieve the discount percentage for a user based on their active membership tier.
     """
 
+    # Get necessary values for processing
     cur = mysql.connection.cursor(MySQL.cursors.DictCursor)
     cur.execute("SELECT membership_tier, membership_end FROM user WHERE user_id = %s", (user_id))
     user = cur.fetchone()
     cur.close
 
+    # 0 discount if not a user or membership has ended
     if not user or not user['membership_end']:
         return 0
     
+    # 
     if user['membership_end'] < datetime.now().date():
         return 0
     
-    discounts = {
-        'Bronze' : 10,
-        'Silver' : 15,
-        'Gold' : 20,
-        'Platinum' : 25,
-        'Diamond' : 30,
-    }
+    # Retrieve tier and 0 discount if not in system-specified tiers
+    membership_tier = user['membership_tier']
+    if membership_tier not in MEMBERSHIPS:
+        return 0
 
-    return discounts.get(user['membership_tier'], 0)
+    # Extract discount through membership_tier
+    return MEMBERSHIPS[membership_tier]['discount']
