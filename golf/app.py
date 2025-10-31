@@ -210,12 +210,12 @@ def booking():
 @app.route("/booking/fairway", methods=["GET", "POST"])
 @login_required
 def fairway():
-    return apology("67 error", 67)
+    return render_template("fairway.html")
 
 @app.route("/booking/range", methods=["GET", "POST"])
 @login_required
 def range():
-    return apology("67 error", 67)
+    return render_template("range.html")
 
 # Account
 @app.route("/account")
