@@ -47,10 +47,9 @@ def register():
 
         cur = mysql.connection.cursor()
         cur.execute("SELECT * FROM user WHERE email = %s", (email,))
-        user = cur.fetchone()
-        cur.close()
-        if user:
+        if cur.rowcount == 1:
             return apology("Email already exists.", 400)
+        cur.close()
         
         if not password or not confirmation:
             return apology("Input your password and its confirmation.", 400)
@@ -194,8 +193,19 @@ def checkout():
             message = "Your balance in your card has been deducted from your payment."
             return render_template("purchased.html", message=message)
     else:
-        
+        cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+
+        # Check if a session is booked (session_user is not null)
+        cur.execute("SELECT session_user_id FROM payment WHERE user_id = %s", (session["user_id"],))
+        if cur.rowcount == 0:
+            session_price = 0
+        else:
+            cur.execute("SELECT session_user_id FROM payment WHERE user_id = %s", (session["user_id"],))
+        cur.close()
+
+        # Check if a cart has items (cart_id in items table is not null)
         return render_template("checkout.html")
+                               #membership=membership_price, session_price=session_price, cart_price=cart_price)
 
 @app.route("/logout")
 def logout():
