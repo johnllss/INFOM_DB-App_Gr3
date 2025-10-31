@@ -17,6 +17,7 @@ app.config['MYSQL_USER'] = 'uhxxpvfj9cyz1zcv'
 app.config['MYSQL_PASSWORD'] = '3K27XZbrqzZMjW2o6btz'
 app.config['MYSQL_DB'] = 'bdxiyb8jgtmepmiynhz9'
 app.config['MYSQL_PORT'] = 3306
+app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
 
 mysql = MySQL(app)
 
@@ -184,11 +185,13 @@ def add_subscription_to_cart():
 @app.route("/shop", methods=["GET", "POST"])
 @login_required
 def shop():
-    items = [
-        {"id": 1, "name": "HONMA Driver 67y", "price": 67},
-        {"id": 2, "name": "HONMA Driver 67y", "price": 67},
-        {"id": 3, "name": "HONMA Driver 67y", "price": 67},
-    ]
+    cursor = mysql.connection.cursor()
+
+    # Query the database
+    cursor.execute("SELECT * FROM item;")
+    items = cursor.fetchall()  
+
+    cursor.close()
     cart_items = items[:67]  # Example count
     return render_template("shop.html", items=items, cart_items=cart_items)
 

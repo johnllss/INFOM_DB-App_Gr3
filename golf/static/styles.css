@@ -113,3 +113,14 @@ body.homepage-background {
 .fs-8{
   font-size: 0.75rem;
 }
+
+.shopfilter{
+  background-color: #2e944b;
+  color: white;
+  padding: 1rem 1rem;
+  border-radius: 10px;
+}
+
+.bi-search {
+  color: #2e944b !important;
+}
