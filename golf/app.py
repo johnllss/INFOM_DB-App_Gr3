@@ -3,6 +3,7 @@ from flask_session import Session
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask_mysqldb import MySQL
 import MySQLdb.cursors
+from datetime import datetime, timedelta
 from helpers import apology, login_required
 
 app = Flask(__name__)
@@ -230,3 +231,32 @@ def logout():
 
     # Redirect user to login form
     return redirect("/")
+
+
+
+# Local helper function
+def get_user_discount(user_id):
+    """
+    Retrieve the discount percentage for a user based on their active membership tier.
+    """
+
+    cur = mysql.connection.cursor(MySQL.cursors.DictCursor)
+    cur.execute("SELECT membership_tier, membership_end FROM user WHERE user_id = %s", (user_id))
+    user = cur.fetchone()
+    cur.close
+
+    if not user or not user['membership_end']:
+        return 0
+    
+    if user['membership_end'] < datetime.now().date:
+        return 0
+    
+    discounts = {
+        'Bronze' : 10,
+        'Silver' : 15,
+        'Gold' : 20,
+        'Platinum' : 25,
+        'Diamond' : 30,
+    }
+
+    return discounts.get(user['membership_tier'], 0)
