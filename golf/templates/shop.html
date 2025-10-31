@@ -1,0 +1,27 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Shop
+{% endblock %}
+
+{% block body_class %}
+    shop-background
+{% endblock %}
+
+{% block main%}
+<div class="container-fluid mt-3">
+  <div class="row">
+
+    <!-- Left Sidebar: Filters + Cart -->
+    <div class="col-md-3">
+      {% include 'shop_filters.html' %}
+    </div>
+
+    <!-- Right Column: Item Listings -->
+    <div class="col-md-9">
+      {% include 'shop_items.html' %}
+    </div>
+
+  </div>
+</div>
+{% endblock %}
