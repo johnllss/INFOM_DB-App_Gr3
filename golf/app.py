@@ -125,11 +125,15 @@ def homepage():
 def membership():
     return render_template("membership.html")
 
-    # return apology("67 error", 67)
-
+# Subscribe (Clicks from Membership)
 @app.route("/subscribe", methods=["POST"])
+@login_required
 def subscribe():
-    return apology("67 error", 67)
+    tier = request.form.get("tier")
+
+    # Subscribe the user
+
+    return redirect("membership")
 
 # Shop
 @app.route("/shop", methods=["GET", "POST"])
