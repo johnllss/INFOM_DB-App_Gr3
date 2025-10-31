@@ -130,9 +130,23 @@ def membership():
 def subscribe():
     if request.method == "POST":
         tier = request.form.get("tier")
-        return render_template("subscribe.html")
+        
+        # Backend definition of membership tiers
+        memberships = {
+            'Bronze': {'price': 10000, 'discount': 10, 'color': '#d48926'},
+            'Silver': {'price': 20000, 'discount': 15, 'color': '#e8e8e8'},
+            'Gold': {'price': 30000, 'discount': 20, 'color': '#ffd600'},
+            'Platinum': {'price': 40000, 'discount': 25, 'color': '#cbcbcb'},
+            'Diamond': {'price': 50000, 'discount': 30, 'color': '#44b0ff'}
+        }
+        
+        if tier not in memberships:
+            return apology("Invalid membership tier.", 400)
 
-    return redirect("membership")
+        # Backend membership details passing to /subscribe page
+        return render_template("subscribe.html", tier=tier, price=memberships[tier]['price'], discount=memberships[tier]['discount'], color=memberships[tier]['color'])
+
+    return redirect("/membership")
 
 # Shop
 @app.route("/shop", methods=["GET", "POST"])

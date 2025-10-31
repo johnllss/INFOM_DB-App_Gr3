@@ -1,11 +1,72 @@
 {% extends "layout.html" %}
 
 {% block title %}
-    Subscription
+    Subscription Confirmation
 {% endblock %}
 
 {% block main %}
-    <div class="text-center mt-5 mb-5">
-        <h1 style="font-size: 70px;"><strong>Are you sure?</strong</h1>
+    <div class="text-left ms-md-5 me-md-5 mt-5 mb-5">
+        <h1 style="font-size: 70px;"><strong>Subscription Confirmation</strong></h1>
+        <p class="lead">You are about to subscribe to the <strong style="color: {{ color }};">{{ tier }}</strong> membership</p>
     </div>
+
+    <div class="container" style="max-width: 600px;">
+        <div class="card shadow-lg border-0 round-4">
+            <div class="mb-4">Subscription Details</div>
+
+            <div class="mb-3">
+                <strong>Tier:</strong> {{ tier }}
+            </div>
+            <div class="mb-3">
+                <strong>Monthly Price: </strong> ₱{{ "{{:,.0f}}".format(price/1000) }} k
+            </div>
+            <div class="mb-3">
+                <strong>Discount on Sessions:</strong> {{ discount }}%
+            </div>
+            <div class="mb-4">
+                <strong>Duration:</strong>
+                <select name="months" id="months" class="form-select" onchange="updateTotal()">
+                    <option value="1">1 Month</option>
+                    <option value="3">3 Month</option>
+                    <option value="6">6 Month</option>
+                    <option value="12">12 Month</option>
+                </select>
+            </div>
+            <div class="mb-4">
+                <h4>Total: ₱<span id="total">{{ "{{:,.0f}}".format(price/1000) }}</span>k</h4>
+            </div>
+
+            <form action="" method="post">
+                <input type="hidden" name="tier" value="{{ tier }}">
+                <input type="hidden" name="price" value="{{ price }}">
+                <input type="hidden" name="discount" value="{{ discount }}">
+                <input type="hidden" id="months_input" name="months" value="1">
+
+                <div class="mb-3">
+                    <label for="payment_method" class="form-label"><strong>Payment Method:</strong></label>
+                    <select name="payment_method" id="payment_method" class="form-select" required>
+                        <option value="">Select your payment method.</option>
+                        <option value="Cash">Cash</option>
+                        <option value="GCash">GCash</option>
+                        <option value="Credit Card">Credit Card</option>
+                    </select>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-success btn-lg">Confirm Subscription</button>
+                    <a href="/membership" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function updateTotal() {
+            const months = parstInt(document.getElementById('months').value);
+            const basePrice = {{ price }};
+            const total = (basePrice * months) / 1000;
+            document.getElementById('total').textContent = total.toLocaleString('en-US', {maximumFractionDigits: 0});
+            document.getElementById('months_input').value = months;
+        }
+    </script>
 {% endblock %}
