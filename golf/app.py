@@ -165,43 +165,21 @@ def add_subscription_to_cart():
     price = int(request.form.get("price", 0))
     months = int(request.form.get("months", 0))
 
-    if not tier or price <= 0:
+    if not tier or price <= 0 or months <= 0:
         return apology("Invalid subscription details.", 400)
 
     total_price = price * months
 
-    cur = mysql.connection.cursor()
-    # Check if user has a cart
-    cur.execute("SELECT cart_id FROM cart WHERE user_id = %s", (session["user_id"],))
-    cur = cur.fetchone()
+    # Store the details of the pending membership purchase in the current user session
+    session["checkout_details"] = {
+        "type": "membership",
+        "tier": tier,
+        "months": months,
+        "total_price": total_price,
+        "name": f"{tier} Membership ({months} month{'s' if months > 1 else ''})"
+    }
 
-    if not cart:
-        cur.execute("INSERT INTO cart (user_id, total_price) VALEUS (%s, 0)", session["user_id"],)
-        mysql.connection.commit()
-        cart_id = cur.lastrowid
-    else:
-        cart_id = cart["cart_id"]
-
-    # Check if user has already added a membership to cart
-    cur.execute("SELECT * FROM item WHERE cart_id = %s AND name LIKE '%Membership%'", (cart_id,))
-    membership_in_cart = cur.fetchone()
-
-    membership_name = f"{tier} Membership ({months} month{'s' if months > 1 else ''})"
-
-    if membership_in_cart:
-    # Replace the one in cart with recently clicked membership tier
-        cur.execute("UPDATE item SET name = %s, price = %s, quantity = 1 WHERE item_id = %s", (membership_name, total_price, membership_in_cart["item_id"]))
-    else:
-    # Add the recently clicked membership tier to cart
-        cur.execute("INSERT INTO item (name, type, quantity, price, cart_id) VALUES (%s, 'Sale', 1, %s, %s)", (membership_name, total_price, cart_id))
-
-    # Update cart's total price
-    cur.execute("UPDATE cart SET total_price = (SELECT COALESCE(SUM(price), 0) FROM item WHERE cart_id = %s) WHERE cart_id = %s", (cart_id, cart_id))
-
-    mysql.connection.commit()
-    cur.close()
-
-    return redirect("/cart")
+    return redirect("/checkout")
 
 # Shop
 @app.route("/shop", methods=["GET", "POST"])
@@ -288,7 +266,7 @@ def checkout():
 
         # Check if a cart has items (cart_id in items table is not null)
         return render_template("checkout.html")
-                               #membership=membership_price, session_price=session_price, cart_price=cart_price)
+                               #, membership=membership_price, session_price=session_price, cart_price=cart_price)
 
 @app.route("/logout")
 def logout():
