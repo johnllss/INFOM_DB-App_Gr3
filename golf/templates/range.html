@@ -49,15 +49,17 @@
                     </p>
 
                     <div class="count-cointainer mt-1">
-                        <button class="btn-counter" data-action="decrement" aria-label="Decrease quantity">
+                        <button class="btn-counter" id="decreaseBtn" aria-label="Decrease quantity">
                             &minus;
                         </button>
                         
-                        <input type="number" class="display-count" id="item-quantity" value="1" min="1" max="10">
+                        <span class="display-count" id="bucketsAmount">1</span>
                         
-                        <button class="btn-counter" data-action="increment" aria-label="Increase quantity">
+                        <button class="btn-counter" id="increaseBtn" aria-label="Increase quantity">
                             &plus;
                         </button>
+                        
+                        <input type="hidden" id="hiddenValue" value="1">
                     </div>
 
                 </div>
@@ -90,5 +92,33 @@
 
         </div>
     </div>
+
+    <script>
+        const decreaseBtn = document.getElementById('decreaseBtn');
+        const displayAmount = document.getElementById('bucketsAmount');
+        const increaseBtn = document.getElementById('increaseBtn');
+        const realAmount = document.getElementById('hiddenValue');
+
+        function updateQuantity(addend) {
+            let curVal = parseInt(displayAmount.textContent); 
+            let newVal = curVal + addend;
+
+            if (newVal < 1) {
+                newVal = 1;
+            }
+            
+            displayAmount.textContent = newVal;
+            realAmount.value = newVal; 
+        }
+
+        // Attach listeners
+        increaseBtn.addEventListener('click', function() {
+            updateQuantity(1); // Increase by 1
+        });
+
+        decreaseBtn.addEventListener('click', function() {
+            updateQuantity(-1); // Decrease by 1
+        });
+    </script>
     
 {% endblock %}  
