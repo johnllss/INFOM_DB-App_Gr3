@@ -285,7 +285,7 @@ def checkout():
         else:
             return apology("Invalid payment method.", 400)
         
-        # Database Updating
+        # DATABASE UPDATING
         if is_payment_successful:
 
             loyalty_points_used = session.get("loyalty_points_to_use", 0)
@@ -354,14 +354,22 @@ def checkout():
         membership_fee = 0.0
         session_fee = 0.0
         cart_fee = 0.0
+
         membership_discount_percent = 0
         membership_discount_amount = 0.0
-        loyalty_discount = 0.0
+        loyalty_discount_amount = 0.0
+        loyalty_points_to_use = 0
 
         cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
 
+        cur.execute("SELECT loyalty_points FROM user WHERE user_id = %s", (session["user_id"],))
+        loyalty_points_data = cur.fetchone()
+        user_current_loyalty_points = loyalty_points_data["loyalty_points"] if loyalty_points_data else 0
+
         # MEMBERSHIP HANDLING
         if "checkout_details" in session and session["checkout_details"]["type"] == "membership":
+            membership_fee = session["checkout_details"]["total_price"]
+
             # 0 fees for session and cart since this is a Membership purchase only
             session_fee = 0.0
             cart_fee = 0.0
@@ -369,7 +377,8 @@ def checkout():
             # buying a Membership doesn't merit discounts
             membership_discount_percent = 0
             membership_discount_amount = 0.0
-            loyalty_discount = 0.0
+            loyalty_discount_amount = 0.0
+            loyalty_points_to_use = 0
 
         else:
             # SESSION_USER HANDLING
@@ -423,7 +432,6 @@ def checkout():
             session_fee = session_price + staff_price
                 
             # CART HANDLING
-            cart_price = 0
             cur.execute("""
                     SELECT total_price
                     FROM cart
@@ -431,23 +439,30 @@ def checkout():
                 """, (session["user_id"],))
             cart = cur.fetchone()
 
-            if cart and staff["total_price"]:
-                cart_price += cart["total_price"]
+            if cart and cart["total_price"]:
+                cart_fee = cart["total_price"]
 
-            # discounts only for Cart checkout
+            # DISCOUNTS ONLY FOR CART CHECKOUT
             membership_discount_percent = get_user_discount(session["user_id"])
             membership_discount_amount = (session_fee + cart_fee) * (membership_discount_percent / 100.0)
 
-            #TODO: Logic for loyalty points discount
-            loyalty_discount = 0.0
+            # total before loyalty discount
+            total_before_loyalty = (session_fee + cart_fee) - membership_discount_amount
+            # find minimum between user's current loyalty points and the total before loyalty discount (this is to use only what the user has and not exceed)
+            loyalty_points_to_use = min(user_current_loyalty_points, int(total_before_loyalty))
+
+            if loyalty_points_to_use < 0:
+                loyalty_points_to_use = 0
+
+            loyalty_discount_amount = float(loyalty_points_to_use)
 
         cur.close()
 
         subtotal = membership_fee + session_fee + cart_fee
-        total = subtotal - membership_discount_amount - loyalty_discount
+        total = subtotal - membership_discount_amount - loyalty_discount_amount
 
         # Check if a cart has items (cart_id in items table is not null)
-        return render_template("checkout.html", p_membership=php(membership_fee), p_session=php(session_fee), p_cart=php(cart_fee), p_sub_total=php(subtotal), p_discount_percent=membership_discount_percent, p_discount_amount=php(membership_discount_amount), p_loyalty_discount=php(loyalty_discount), p_total=php(total))
+        return render_template("checkout.html", p_membership=php(membership_fee), p_session=php(session_fee), p_cart=php(cart_fee), p_sub_total=php(subtotal), p_discount_percent=membership_discount_percent, p_discount_amount=php(membership_discount_amount), p_loyalty_points_used=loyalty_points_to_use, p_loyalty_discount=php(loyalty_discount_amount), p_total=php(total))
 
 
 @app.route("/logout")
