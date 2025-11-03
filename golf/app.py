@@ -235,26 +235,77 @@ def account():
 @app.route("/checkout", methods=["GET", "POST"])
 @login_required
 def checkout():
+    # POST method
     if request.method == "POST":
         payment_method = request.form.get("method")
 
+        is_payment_successful = False # Used for validation for database updating below
+        message = ""
+
         if payment_method == "cash":
+            payment_method_enum = "Cash"
             message = "Pass in the cash to the assigned counter."
-            return render_template("purchased.html", message=message)
-        if payment_method == "gcash":
+            payment_successful = True
+        elif payment_method == "gcash":
+            payment_method_enum = "GCash"
             message = "Your balance in GCash has been deducted from your payment."
-            return render_template("purchased.html", message=message)
-        if payment_method == "card":
+            is_payment_successful = True
+        elif payment_method == "card":
+            payment_method_enum = "Credit Card"
             card_name = request.form.get("name")
             card_number = request.form.get("c_num")
             expiry_date = request.form.get("exp_date")
             cvv = request.form.get("cvv")
 
             if not (card_name and card_number and expiry_date and cvv):
-                return apology("Fill in the complete card details.", 67)
+                return apology("Fill in the complete card details.", 400)
 
             message = "Your balance in your card has been deducted from your payment."
-            return render_template("purchased.html", message=message)
+            is_payment_successful = True
+        else:
+            return apology("Invalid payment method.", 400)
+        
+        # Database Updating
+        if is_payment_successful:
+
+            # CHECK IF MEMBERSHIP. If true, process checkout for Membership purchase
+            if "checkout_details" in session and session["checkout_details"]["type"] == "membership":
+                details = session["checkout_details"]
+
+                try:
+                    tier = details["tier"]
+                    months = details["months"]
+                    total_price = details["total_price"]
+                    user_id = session["user_id"]
+
+                    # Calculate membership_start and membership_end
+                    membership_start = datetime.now().date()
+                    membership_end = membership_start + timedelta(days=30 * months)
+
+                    cur = mysql.conneciton.cursor()
+
+                    # Push the membership details to the User's info in the database
+                    cur.execute("UPDATE user SET membership_tier = %s, membership_start = %s, membership_end = %s, months_subscribed = months_subscribed + %s WHERE user_id = %s", (tier, membership_start, membership_end, months, user_id))
+
+                    # Create a record for this Membership purchase in the Payment table
+                    cur.execute("INSERT INTO payments (total_price, date_paid, payment_method, status, user_id, cart_id, session_user_id) VALUES (%s, NOW(), %s, 'Paid', %s, NULL, NULL)", (total_price, payment_method_enum, user_id))
+
+                    mysql.connection.commit()
+                    cur.close()
+
+                    # Clear the Membership purchase details for this session
+                    session.pop("checkout_details")
+
+                except Exception as e:
+                    mysql.connection.rollback()
+                    cur.close()
+                    return apology(f"An error occured: {e}", 500)
+                
+            else:
+                pass
+
+
+    # GET method
     else:
         cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
         # MEMBERSHIP HANDLING
@@ -348,10 +399,10 @@ def get_user_discount(user_id):
     """
 
     # Get necessary values for processing
-    cur = mysql.connection.cursor(MySQL.cursors.DictCursor)
+    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cur.execute("SELECT membership_tier, membership_end FROM user WHERE user_id = %s", (session["user_id"],))
     user = cur.fetchone()
-    cur.close
+    cur.close()
 
     # 0 discount if not a user or membership_end is empty
     if not user or not user['membership_end']:
