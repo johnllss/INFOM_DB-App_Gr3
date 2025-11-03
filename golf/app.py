@@ -245,9 +245,9 @@ def account():
 
     # DRIVING RANGE INFO (Limit 4 for display)
     # TODO: extract from DB the Buckets number, the Range, and the Date of when it happened
-    # TODO: extract from DB the Hole number, the Range, and the Date of when it happened
-    # TODO: extract from DB the Hole number, the Range, and the Date of when it happened
-    # TODO: extract from DB the Hole number, the Range, and the Date of when it happened
+    # TODO: extract from DB the Buckets number, the Range, and the Date of when it happened
+    # TODO: extract from DB the Buckets number, the Range, and the Date of when it happened
+    # TODO: extract from DB the Buckets number, the Range, and the Date of when it happened
 
     return render_template("account.html", first_name=first_name, last_name=last_name)
 
@@ -288,15 +288,16 @@ def checkout():
         # Database Updating
         if is_payment_successful:
 
+            loyalty_points_used = session.get("loyalty_points_to_use", 0)
+
             # MEMBERSHIP CHECKOUT HANDLING
             if "checkout_details" in session and session["checkout_details"]["type"] == "membership":
-                details = session["checkout_details"]
+                membership_details = session["checkout_details"]
 
                 try:
-                    tier = details["tier"]
-                    months = details["months"]
-                    total_price = details["total_price"]
-                    user_id = session["user_id"]
+                    tier = membership_details["tier"]
+                    months = membership_details["months"]
+                    total_price = membership_details["total_price"]
 
                     # Calculate membership_start and membership_end
                     membership_start = datetime.now().date()
@@ -305,10 +306,10 @@ def checkout():
                     cur = mysql.conneciton.cursor()
 
                     # Push the membership details to the User's info in the database
-                    cur.execute("UPDATE user SET membership_tier = %s, membership_start = %s, membership_end = %s, months_subscribed = months_subscribed + %s WHERE user_id = %s", (tier, membership_start, membership_end, months, user_id))
+                    cur.execute("UPDATE user SET membership_tier = %s, membership_start = %s, membership_end = %s, months_subscribed = months_subscribed + %s WHERE user_id = %s", (tier, membership_start, membership_end, months, session["user_id"]))
 
                     # Create a record for this Membership purchase in the Payment table
-                    cur.execute("INSERT INTO payments (total_price, date_paid, payment_method, status, user_id, cart_id, session_user_id) VALUES (%s, NOW(), %s, 'Paid', %s, NULL, NULL)", (total_price, payment_method_enum, user_id))
+                    cur.execute("INSERT INTO payments (total_price, date_paid, payment_method, status, user_id, cart_id, session_user_id) VALUES (%s, NOW(), %s, 'Paid', %s, NULL, NULL)", (total_price, payment_method_enum, session["user_id"]))
 
                     mysql.connection.commit()
                     cur.close()
@@ -323,10 +324,25 @@ def checkout():
                 
             # SESSION_USER HANDLING W/ CART CHECKOUT
             else:
-                # TODO: Updating of Payment table for session, clearing cart, and other stuff
-                pass # For avoiding syntax errors (To be removed once TODO is done)
+                try:
+                    cur = mysql.connection.cursor()
 
-            
+                    if loyalty_points_used > 0:
+                        cur.execute("UPDATE user SET loyalty_points = loyalty_points - %s WHERE user_id = %s", (loyalty_points_used, session["user_id"]))
+
+                    # TODO: Updating of Payment table for session, clearing cart, and other stuff
+
+                    mysql.connection.commit()
+                    cur.close()
+
+                except Exception as e:
+                    mysql.connection.rollback()
+                    cur.close()
+                    return apology(f"An error occured: {e}", 500)
+                
+            if "loyalty_points_to_use" in session:
+                session.pop("loyalty_points_to_use")
+
             return render_template("purchased.html", message=message)
         
         else:
