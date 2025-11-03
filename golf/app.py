@@ -226,8 +226,28 @@ def account():
     user = cur.fetchone()
     cur.close()
 
+    # MAIN INFO
     first_name = user['first_name']
     last_name = user['last_name']
+    # TODO: extract from DB the Membership Tier
+    # TODO: extract from DB the number of Loyalty Points
+    
+    # GAME STATISTICS INFO
+    # TODO: extract from DB the Longest Driving Range and the Date of when it happened
+    # TODO: extract from DB the Highest Fairway Score and the Date of when it happened
+    # TODO: extract from DB the Months Subscribed and the Date of when it happened
+
+    # FAIRWAY INFO (Limit 4 for display)
+    # TODO: extract from DB the Hole number, the Score, and the Date of when it happened
+    # TODO: extract from DB the Hole number, the Score, and the Date of when it happened
+    # TODO: extract from DB the Hole number, the Score, and the Date of when it happened
+    # TODO: extract from DB the Hole number, the Score, and the Date of when it happened
+
+    # DRIVING RANGE INFO (Limit 4 for display)
+    # TODO: extract from DB the Buckets number, the Range, and the Date of when it happened
+    # TODO: extract from DB the Hole number, the Range, and the Date of when it happened
+    # TODO: extract from DB the Hole number, the Range, and the Date of when it happened
+    # TODO: extract from DB the Hole number, the Range, and the Date of when it happened
 
     return render_template("account.html", first_name=first_name, last_name=last_name)
 
