@@ -268,7 +268,7 @@ def checkout():
         # Database Updating
         if is_payment_successful:
 
-            # CHECK IF MEMBERSHIP. If true, process checkout for Membership purchase
+            # MEMBERSHIP CHECKOUT HANDLING
             if "checkout_details" in session and session["checkout_details"]["type"] == "membership":
                 details = session["checkout_details"]
 
@@ -301,12 +301,22 @@ def checkout():
                     cur.close()
                     return apology(f"An error occured: {e}", 500)
                 
+            # SESSION_USER HANDLING W/ CART CHECKOUT
             else:
-                pass
+                # TODO: Updating of Payment table for session, clearing cart, and other stuff
+                pass # For avoiding syntax errors (To be removed once TODO is done)
+
+            
+            return render_template("purchased.html", message=message)
+        
+        else:
+            return apology("Payment failed.", 400)
 
 
     # GET method
     else:
+
+
         cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
         # MEMBERSHIP HANDLING
 
