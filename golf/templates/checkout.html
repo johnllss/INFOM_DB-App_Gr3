@@ -11,7 +11,7 @@
         <div class="col-md-5 d-flex flex-column gap-3">
             <div class="d-flex">
                 <div>Membership Fee</div>
-                <div class="ms-auto"><strong>P67</strong></div>
+                <div class="ms-auto"><strong>{{ p_membership }}</strong></div>
             </div>
             <div class="d-flex">
                 <div>Session Total Fee</div>
@@ -26,25 +26,25 @@
 
             <div class="d-flex">
                 <span class="fs-5">Sub Total</span>
-                <div class="fs-5 ms-auto"><strong>P67</strong></div>
+                <div class="fs-5 ms-auto"><strong>{{ p_sub_total }}</strong></div>
             </div>
 
             <hr class="my-2">
 
             <div class="d-flex">
-                <div>Membership Discount {Member}</div>
-                <div class="ms-auto"><strong>-P67</strong></div>
+                <div>Membership Discount ({{ p_discount_percent }}%)</div>
+                <div class="ms-auto"><strong>-{{ p_discount_amount }}</strong></div>
             </div>
             <div class="d-flex">
-                <div>Loyalty Points Discount {67 pts}</div>
-                <div class="ms-auto"><strong>-P67</strong></div>
+                <div>Loyalty Points Discount</div>
+                <div class="ms-auto"><strong>-{{ p_loyalty_discount }}</strong></div>
             </div>
 
             <hr class="my-2">
 
             <div class="d-flex">
                 <span class="fs-4"><strong>Total</strong></span>
-                <div class="fs-4 ms-auto"><strong>P67</strong></div>
+                <div class="fs-4 ms-auto"><strong>{{ p_total }}</strong></div>
             </div>
 
 
