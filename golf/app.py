@@ -315,77 +315,103 @@ def checkout():
 
     # GET method
     else:
-
+        membership_fee = 0.0
+        session_fee = 0.0
+        cart_fee = 0.0
+        membership_discount_percent = 0
+        membership_discount_amount = 0.0
+        loyalty_discount = 0.0
 
         cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+
         # MEMBERSHIP HANDLING
+        if "checkout_details" in session and session["checkout_details"]["type"] == "membership":
+            # 0 fees for session and cart since this is a Membership purchase only
+            session_fee = 0.0
+            cart_fee = 0.0
 
-        # SESSION_USER HANDLING
-        cur.execute("SELECT session_user_id FROM payment WHERE user_id = %s", (session["user_id"],))
-        session_user = cur.fetchone()
+            # buying a Membership doesn't merit discounts
+            membership_discount_percent = 0
+            membership_discount_amount = 0.0
+            loyalty_discount = 0.0
 
-        session_price = 0
-        staff_price = 0
+        else:
+            # SESSION_USER HANDLING
+            cur.execute("SELECT session_user_id FROM payment WHERE user_id = %s", (session["user_id"],))
+            session_user = cur.fetchone()
 
-        if session_user and session_user["session_user_id"]:
-            session_user_id = session_user["session_user_id"]
+            session_price = 0
+            staff_price = 0
 
-            # if user booked for a pending session
-            cur.execute("""
-                SELECT gs.session_price AS price
-                FROM golf_session gs
-                JOIN session_user su ON gs.session_id = su.session_id
-                WHERE su.session_user_id = %s
-            """, (session_user_id,))
-            golf_session = cur.fetchone()
+            if session_user and session_user["session_user_id"]:
+                session_user_id = session_user["session_user_id"]
 
-            if golf_session:
-                session_price = golf_session["price"]
-
-                # if driving range, check buckets ordered
+                # if user booked for a pending session
                 cur.execute("""
-                    SELECT buckets
+                    SELECT gs.session_price AS price
+                    FROM golf_session gs
+                    JOIN session_user su ON gs.session_id = su.session_id
+                    WHERE su.session_user_id = %s
+                """, (session_user_id,))
+                golf_session = cur.fetchone()
+
+                if golf_session:
+                    session_price = golf_session["price"]
+
+                    # if driving range, check buckets ordered
+                    cur.execute("""
+                        SELECT buckets
+                        FROM session_user
+                        WHERE session_user_id = %s
+                    """, (session_user_id,))
+                    buckets = cur.fetchone()
+
+                    if buckets and buckets["buckets"] != 0:
+                        session_price += buckets["buckets"] * 300
+
+                # if user asked for a staff
+                cur.execute("""
+                    SELECT staff_id
                     FROM session_user
                     WHERE session_user_id = %s
                 """, (session_user_id,))
-                buckets = cur.fetchone()
-
-                if buckets and buckets["buckets"] != 0:
-                    session_price += buckets["buckets"] * 300
-
-            # if user asked for a staff
-            cur.execute("""
-                SELECT staff_id
-                FROM session_user
-                WHERE session_user_id = %s
-            """, (session_user_id,))
-            staff = cur.fetchone()
-
-            if staff and staff["staff_id"]:
-                cur.execute("SELECT service_fee FROM staff WHERE staff_id = %s", (staff["staff_id"],))
                 staff = cur.fetchone()
-                if staff:
-                    staff_price = staff["service_fee"]
-            
-        # CART HANDLING
-        cart_price = 0
-        cur.execute("""
-                SELECT total_price
-                FROM cart
-                WHERE user_id = %s
-            """, (session["user_id"],))
-        cart = cur.fetchone()
 
-        if cart and staff["total_price"]:
-            cart_price += cart["total_price"]
+                if staff and staff["staff_id"]:
+                    cur.execute("SELECT service_fee FROM staff WHERE staff_id = %s", (staff["staff_id"],))
+                    staff = cur.fetchone()
+                    if staff:
+                        staff_price = staff["service_fee"]
+
+            # old 'total_session_cost' var; renamed to 'session_fee' to since it's not yet the total and it's part of the 'subtotal' calculation below
+            session_fee = session_price + staff_price
+                
+            # CART HANDLING
+            cart_price = 0
+            cur.execute("""
+                    SELECT total_price
+                    FROM cart
+                    WHERE user_id = %s
+                """, (session["user_id"],))
+            cart = cur.fetchone()
+
+            if cart and staff["total_price"]:
+                cart_price += cart["total_price"]
+
+            # discounts only for Cart checkout
+            membership_discount_percent = get_user_discount(session["user_id"])
+            membership_discount_amount = (session_fee + cart_fee) * (membership_discount_percent / 100.0)
+
+            #TODO: Logic for loyalty points discount
+            loyalty_discount = 0.0
 
         cur.close()
 
-        # Now you have:
-        total_session_cost = session_price + staff_price
+        subtotal = membership_fee + session_fee + cart_fee
+        total = subtotal - membership_discount_amount - loyalty_discount
 
         # Check if a cart has items (cart_id in items table is not null)
-        return render_template("checkout.html", p_cart=php(cart_price), p_session=php(total_session_cost))
+        return render_template("checkout.html", p_membership=php(membership_fee), p_session=php(session_fee), p_cart=php(cart_fee), p_sub_total=php(subtotal), p_discount_percent=membership_discount_percent, p_discount_amount=php(membership_discount_amount), p_loyalty_discount=php(loyalty_discount), p_total=php(total))
 
 
 @app.route("/logout")
