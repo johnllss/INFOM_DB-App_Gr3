@@ -78,6 +78,7 @@ CREATE TABLE session_user (
 CREATE TABLE item (
     item_id     INT PRIMARY KEY AUTO_INCREMENT,
     name        VARCHAR(100) NOT NULL,
+    category    ENUM('Clubs','Balls','Bags','Apparel','Equipment','Miscellaneous'),
     type        ENUM('Sale','Rental') NOT NULL,
     quantity    INT DEFAULT 1 NOT NULL,
     price       DECIMAL(10,2) NOT NULL,
