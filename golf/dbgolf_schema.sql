@@ -55,14 +55,15 @@ CREATE TABLE golf_session (
 );
 
 CREATE TABLE session_user (
-    session_user_id     INT PRIMARY KEY AUTO_INCREMENT,
-    user_id             INT,
-    session_id          INT NOT NULL,
-    staff_id            INT,
-    score_fairway       INT DEFAULT NULL,
-    longest_range       INT DEFAULT NULL,
-    buckets             INT,
-    loyalty_earned      INT DEFAULT 0,
+    session_user_id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id         INT,
+    session_id      INT NOT NULL,
+    coach_id        INT NULL,
+    caddie_id       INT NULL,
+    score_fairway   INT DEFAULT NULL,
+    longest_range   INT DEFAULT NULL,
+    buckets         INT,
+    loyalty_earned  INT DEFAULT 0,
     UNIQUE (session_id, user_id),
     CONSTRAINT fk_user FOREIGN KEY (user_id)
         REFERENCES user(user_id)
@@ -70,7 +71,10 @@ CREATE TABLE session_user (
     CONSTRAINT fk_session FOREIGN KEY (session_id)
         REFERENCES golf_session(session_id)
         ON DELETE CASCADE,
-    CONSTRAINT fk_staff FOREIGN KEY (staff_id)
+    CONSTRAINT fk_coach FOREIGN KEY (coach_id)
+        REFERENCES staff(staff_id)
+        ON DELETE SET NULL,
+    CONSTRAINT fk_caddie FOREIGN KEY (caddie_id)
         REFERENCES staff(staff_id)
         ON DELETE SET NULL
 );
