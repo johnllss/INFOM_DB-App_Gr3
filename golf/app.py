@@ -461,6 +461,9 @@ def checkout():
         subtotal = membership_fee + session_fee + cart_fee
         total = subtotal - membership_discount_amount - loyalty_discount_amount
 
+        # store loyalty points to use in this current session for POST METHOD handling
+        session["loyalty_points_to_use"] = loyalty_points_to_use
+
         # Check if a cart has items (cart_id in items table is not null)
         return render_template("checkout.html", p_membership=php(membership_fee), p_session=php(session_fee), p_cart=php(cart_fee), p_sub_total=php(subtotal), p_discount_percent=membership_discount_percent, p_discount_amount=php(membership_discount_amount), p_loyalty_points_used=loyalty_points_to_use, p_loyalty_discount=php(loyalty_discount_amount), p_total=php(total))
 
