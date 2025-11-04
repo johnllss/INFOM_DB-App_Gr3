@@ -265,7 +265,7 @@ def checkout():
         if payment_method == "cash":
             payment_method_enum = "Cash"
             message = "Pass in the cash to the assigned counter."
-            payment_successful = True
+            is_payment_successful = True
         elif payment_method == "gcash":
             payment_method_enum = "GCash"
             message = "Your balance in GCash has been deducted from your payment."
@@ -303,7 +303,7 @@ def checkout():
                     membership_start = datetime.now().date()
                     membership_end = membership_start + timedelta(days=30 * months)
 
-                    cur = mysql.conneciton.cursor()
+                    cur = mysql.connection.cursor()
 
                     # Push the membership details to the User's info in the database
                     cur.execute("UPDATE user SET membership_tier = %s, membership_start = %s, membership_end = %s, months_subscribed = months_subscribed + %s WHERE user_id = %s", (tier, membership_start, membership_end, months, session["user_id"]))
