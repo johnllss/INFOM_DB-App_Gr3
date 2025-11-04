@@ -277,6 +277,8 @@ def checkout():
             expiry_date = request.form.get("exp_date")
             cvv = request.form.get("cvv")
 
+            # TODO Card info validation
+
             if not (card_name and card_number and expiry_date and cvv):
                 return apology("Fill in the complete card details.", 400)
 
