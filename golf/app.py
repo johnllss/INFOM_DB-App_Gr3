@@ -309,7 +309,7 @@ def checkout():
                     cur.execute("UPDATE user SET membership_tier = %s, membership_start = %s, membership_end = %s, months_subscribed = months_subscribed + %s WHERE user_id = %s", (tier, membership_start, membership_end, months, session["user_id"]))
 
                     # Create a record for this Membership purchase in the Payment table
-                    cur.execute("INSERT INTO payments (total_price, date_paid, payment_method, status, user_id, cart_id, session_user_id) VALUES (%s, NOW(), %s, 'Paid', %s, NULL, NULL)", (total_price, payment_method_enum, session["user_id"]))
+                    cur.execute("INSERT INTO payment (total_price, date_paid, payment_method, status, user_id, cart_id, session_user_id) VALUES (%s, NOW(), %s, 'Paid', %s, NULL, NULL)", (total_price, payment_method_enum, session["user_id"]))
 
                     mysql.connection.commit()
                     cur.close()
