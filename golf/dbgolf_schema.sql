@@ -95,7 +95,7 @@ CREATE TABLE item (
 CREATE TABLE payment (
     payment_id          INT PRIMARY KEY AUTO_INCREMENT,
     total_price         DECIMAL(10,2) DEFAULT 0,
-    date_paid           DATETIME NOT NULL,
+    date_paid           DATETIME,
     payment_method      ENUM('Cash','GCash','Credit Card') NOT NULL,
     status              ENUM('Pending','Paid') NOT NULL,
     discount_applied    DECIMAL(5,2) DEFAULT 0.0,

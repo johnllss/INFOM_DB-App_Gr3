@@ -68,9 +68,21 @@ def register():
 
         hash = generate_password_hash(password)
 
+        # User Creation
         cur = mysql.connection.cursor()
         cur.execute("INSERT INTO user (first_name, last_name, email, hash) VALUES (%s, %s, %s, %s)",
             (first_name, last_name, email, hash))
+        user_id = cur.lastrowid
+        
+        # Cart Creation
+        cur.execute("INSERT INTO cart (user_id, total_price) VALUES (%s, 0)", (user_id,))
+        cart_id = cur.lastrowid
+
+        # Payment Creation
+        cur.execute("""
+            INSERT INTO payment (total_price, date_paid, payment_method, status, discount_applied, user_id, cart_id)
+            VALUES (0.00, NOW(), 'Cash', 'Pending', 0.00, %s, %s)
+        """, (user_id, cart_id))
         mysql.connection.commit()
         cur.close()
 
@@ -310,9 +322,16 @@ def checkout():
                     # Push the membership details to the User's info in the database
                     cur.execute("UPDATE user SET membership_tier = %s, membership_start = %s, membership_end = %s, months_subscribed = months_subscribed + %s WHERE user_id = %s", (tier, membership_start, membership_end, months, session["user_id"]))
 
-                    # Create a record for this Membership purchase in the Payment table
-                    cur.execute("INSERT INTO payment (total_price, date_paid, payment_method, status, user_id, cart_id, session_user_id) VALUES (%s, NOW(), %s, 'Paid', %s, NULL, NULL)", (total_price, payment_method_enum, session["user_id"]))
-
+                    # Update the existing payment record when the user completes payment
+                    cur.execute("""
+                        UPDATE payment
+                        SET 
+                            total_price = %s,
+                            date_paid = NOW(),
+                            payment_method = %s,
+                            status = 'Paid'
+                        WHERE user_id = %s AND status = 'Pending';
+                    """, (total_price, payment_method_enum, session["user_id"]))
                     mysql.connection.commit()
                     cur.close()
 
