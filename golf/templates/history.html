@@ -1,0 +1,30 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    History
+{% endblock %}
+
+{% block main %}
+    <div class="container-fluid">
+        <table>
+            <thead>
+                <tr>
+                    <th>Price</th>
+                    <th>Payment Method</th>
+                    <th>Discount Applied</th>
+                    <th>Transacted</th>
+                </tr>
+            </thead>
+            <tbody>
+                    {% for payment in payments %}
+                    <tr>
+                        <td>{{ payment.total_price | php }}</td>
+                        <td>{{ payment.payment_method }}</td>
+                        <td>{{ payment.discount_applied }}</td>
+                        <td>{{ payment.date_paid }}</td>
+                    </tr>
+                    {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

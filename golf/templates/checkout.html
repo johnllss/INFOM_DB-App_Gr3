@@ -11,40 +11,40 @@
         <div class="col-md-5 d-flex flex-column gap-3">
             <div class="d-flex">
                 <div>Membership Fee</div>
-                <div class="ms-auto"><strong>{{ p_membership }}</strong></div>
+                <div class="ms-auto"><strong>{{ membership_fee | php }}</strong></div>
             </div>
             <div class="d-flex">
                 <div>Session Total Fee</div>
-                <div class="ms-auto"><strong>{{ p_session }}</strong></div>
+                <div class="ms-auto"><strong>{{ session_fee | php }}</strong></div>
             </div>
             <div class="d-flex">
                 <div>Cart Total Fee</div>
-                <div class="ms-auto"><strong>{{ p_cart }}</strong></div>
+                <div class="ms-auto"><strong>{{ cart_fee | php }}</strong></div>
             </div>
 
             <hr class="my-2">
 
             <div class="d-flex">
                 <span class="fs-5">Sub Total</span>
-                <div class="fs-5 ms-auto"><strong>{{ p_sub_total }}</strong></div>
+                <div class="fs-5 ms-auto"><strong>{{ subtotal | php }}</strong></div>
             </div>
 
             <hr class="my-2">
 
             <div class="d-flex">
-                <div>Membership Discount ({{ p_discount_percent }}%)</div>
-                <div class="ms-auto"><strong>-{{ p_discount_amount }}</strong></div>
+                <div>Membership Discount ({{ discount_percent }}%)</div>
+                <div class="ms-auto"><strong>-{{ discount_amount | php }}</strong></div>
             </div>
             <div class="d-flex">
-                <div>Loyalty Points Discount ({{ p_loyalty_points_used }} pts)</div>
-                <div class="ms-auto"><strong>-{{ p_loyalty_discount }}</strong></div>
+                <div>Loyalty Points Discount ({{ loyalty_points_used }} pts)</div>
+                <div class="ms-auto"><strong>-{{ loyalty_discount | php }}</strong></div>
             </div>
 
             <hr class="my-2">
 
             <div class="d-flex">
                 <span class="fs-4"><strong>Total</strong></span>
-                <div class="fs-4 ms-auto"><strong>{{ p_total }}</strong></div>
+                <div class="fs-4 ms-auto"><strong>{{ total | php }}</strong></div>
             </div>
 
 
