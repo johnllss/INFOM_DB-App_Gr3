@@ -22,11 +22,12 @@
                     <div class="booking-wrapper">
                         <label for="time-selector">Time:</label>
                         <select class="booking-selector" name="booking-time">
-                            <option value="09:00">7:00 AM</option>
-                            <option value="10:30">9:00 AM</option>
-                            <option value="13:00">11:00 AM</option>
-                            <option value="17:00">1:00 PM</option>
-                            <option value="19:30">3:00 PM</option>
+                            <option value="07:00">7:00 AM</option>
+                            <option value="09:00">9:00 AM</option>
+                            <option value="11:00">11:00 AM</option>
+                            <option value="13:00">1:00 PM</option>
+                            <option value="15:00">3:00 PM</option>
+                            <option value="17:00">5:00 PM</option>
                         </select>
                     </div>
 
@@ -54,10 +55,9 @@
                     <div class="booking-wrapper">
                         <label for="coach-selector">Coach:</label>
                         <select class="staff-selector" name="booking-coach">
-                            <option value="1">Jose Gabriel Espineli</option>
-                            <option value="2">Jerry King Deveza</option>
-                            <option value="3">John Lloyd Sunga</option>
-                            <option value="4">Ronald Gabriel Leoncio</option>
+                            {% for s in staff %}
+                                <option value="1">{{s.name}}</option>
+                            {% endfor %}
                         </select>
                     </div>
 
@@ -77,10 +77,9 @@
                     <div class="booking-wrapper">
                         <label for="coach-selector">Caddie:</label>
                         <select class="staff-selector" name="booking-coach">
-                            <option value="1">Jose Gabriel Espineli</option>
-                            <option value="2">Jerry King Deveza</option>
-                            <option value="3">John Lloyd Sunga</option>
-                            <option value="4">Ronald Gabriel Leoncio</option>
+                            {% for s in staff %}
+                                <option value="1">{{s.name}}</option>
+                            {% endfor %}
                         </select>
                     </div>
 
