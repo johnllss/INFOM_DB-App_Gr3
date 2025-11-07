@@ -7,6 +7,8 @@ from datetime import datetime, timedelta
 from helpers import apology, login_required, php
 app = Flask(__name__)
 
+app.jinja_env.filters["php"] = php
+
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
@@ -68,9 +70,21 @@ def register():
 
         hash = generate_password_hash(password)
 
+        # User Creation
         cur = mysql.connection.cursor()
         cur.execute("INSERT INTO user (first_name, last_name, email, hash) VALUES (%s, %s, %s, %s)",
             (first_name, last_name, email, hash))
+        user_id = cur.lastrowid
+        
+        # Cart Creation
+        cur.execute("INSERT INTO cart (user_id, total_price) VALUES (%s, 0)", (user_id,))
+        cart_id = cur.lastrowid
+
+        # Payment Creation
+        cur.execute("""
+            INSERT INTO payment (total_price, date_paid, payment_method, status, discount_applied, user_id, cart_id)
+            VALUES (0.00, NOW(), 'Cash', 'Pending', 0.00, %s, %s)
+        """, (user_id, cart_id))
         mysql.connection.commit()
         cur.close()
 
@@ -128,7 +142,7 @@ def homepage():
 
     return render_template("home.html", user=first_name)
 
-# Membership -> Cart Checkout
+# Membership
 @app.route("/membership", methods=["GET", "POST"])
 @login_required
 def membership():
@@ -141,7 +155,7 @@ def membership():
 
     return render_template("membership.html", memberships=membership_list)
 
-# Subscribe (Clicks from Membership)
+# Subscribe
 @app.route("/subscribe", methods=["POST"])
 @login_required
 def subscribe():
@@ -257,218 +271,71 @@ def account():
 
     return render_template("account.html", first_name=first_name, last_name=last_name)
 
+@app.route("/history")
+@login_required
+def history():
+    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cur.execute("SELECT * FROM payment WHERE user_id = %s AND status = 'Paid'", (session['user_id'],))
+    payments = cur.fetchall()
+    cur.close()
+
+    return render_template("history.html", payments=payments)
+
+
 # Checkout (where all payments are settled)
 @app.route("/checkout", methods=["GET", "POST"])
 @login_required
 def checkout():
-    # POST method
+    user_id = session["user_id"]
+    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+
+    # Load all payment-related context
+    checkout_context = load_checkout_context(cur, user_id)
+
     if request.method == "POST":
         payment_method = request.form.get("method")
 
-        is_payment_successful = False # Used for validation for database updating below
-        message = ""
-
-        if payment_method == "cash":
-            payment_method_enum = "Cash"
-            message = "Pass in the cash to the assigned counter."
-            payment_successful = True
-        elif payment_method == "gcash":
-            payment_method_enum = "GCash"
-            message = "Your balance in GCash has been deducted from your payment."
-            is_payment_successful = True
-        elif payment_method == "card":
-            payment_method_enum = "Credit Card"
-            card_name = request.form.get("name")
-            card_number = request.form.get("c_num")
-            expiry_date = request.form.get("exp_date")
-            cvv = request.form.get("cvv")
-
-            if not (card_name and card_number and expiry_date and cvv):
-                return apology("Fill in the complete card details.", 400)
-
-            message = "Your balance in your card has been deducted from your payment."
-            is_payment_successful = True
-        else:
+        # Validate and standardize payment method
+        payment_method_enum, message = validate_payment_method(payment_method)
+        if not payment_method_enum:
+            cur.close()
             return apology("Invalid payment method.", 400)
-        
-        # DATABASE UPDATING
-        if is_payment_successful:
 
-            loyalty_points_used = session.get("loyalty_points_to_use", 0)
+        try:
+            # Process payments modularly
+            
+            if checkout_context["membership_fee"] != 0:
+                process_membership_payment(cur, user_id, checkout_context)
+                pass
 
-            # MEMBERSHIP CHECKOUT HANDLING
-            if "checkout_details" in session and session["checkout_details"]["type"] == "membership":
-                membership_details = session["checkout_details"]
+            if checkout_context["cart_fee"] != 0:
+                process_cart_payment(cur, user_id, checkout_context)
+                pass
 
-                try:
-                    tier = membership_details["tier"]
-                    months = membership_details["months"]
-                    total_price = membership_details["total_price"]
+            if checkout_context["session_fee"] != 0:
+                process_golf_session_payment(cur, user_id, checkout_context)
+                pass
 
-                    # Calculate membership_start and membership_end
-                    membership_start = datetime.now().date()
-                    membership_end = membership_start + timedelta(days=30 * months)
+            update_loyalty_points(cur, user_id, checkout_context)
 
-                    cur = mysql.conneciton.cursor()
+            mysql.connection.commit()
 
-                    # Push the membership details to the User's info in the database
-                    cur.execute("UPDATE user SET membership_tier = %s, membership_start = %s, membership_end = %s, months_subscribed = months_subscribed + %s WHERE user_id = %s", (tier, membership_start, membership_end, months, session["user_id"]))
+        except Exception as e:
+            mysql.connection.rollback()
+            return apology(f"An error occurred: {e}", 500)
+        finally:
+            cur.close()
 
-                    # Create a record for this Membership purchase in the Payment table
-                    cur.execute("INSERT INTO payments (total_price, date_paid, payment_method, status, user_id, cart_id, session_user_id) VALUES (%s, NOW(), %s, 'Paid', %s, NULL, NULL)", (total_price, payment_method_enum, session["user_id"]))
+        # STEP 5: Cleanup temporary session data
+        cleanup_checkout_session(session)
 
-                    mysql.connection.commit()
-                    cur.close()
+        return render_template("purchased.html", message=message)
 
-                    # Clear the Membership purchase details for this session
-                    session.pop("checkout_details")
-
-                except Exception as e:
-                    mysql.connection.rollback()
-                    cur.close()
-                    return apology(f"An error occured: {e}", 500)
-                
-            # SESSION_USER HANDLING W/ CART CHECKOUT
-            else:
-                try:
-                    cur = mysql.connection.cursor()
-
-                    if loyalty_points_used > 0:
-                        cur.execute("UPDATE user SET loyalty_points = loyalty_points - %s WHERE user_id = %s", (loyalty_points_used, session["user_id"]))
-
-                    # TODO: Updating of Payment table for session, clearing cart, and other stuff
-
-                    mysql.connection.commit()
-                    cur.close()
-
-                except Exception as e:
-                    mysql.connection.rollback()
-                    cur.close()
-                    return apology(f"An error occured: {e}", 500)
-                
-            if "loyalty_points_to_use" in session:
-                session.pop("loyalty_points_to_use")
-
-            return render_template("purchased.html", message=message)
-        
-        else:
-            return apology("Payment failed.", 400)
-
-
-    # GET method
+    # GET METHOD
     else:
-        membership_fee = 0.0
-        session_fee = 0.0
-        cart_fee = 0.0
-
-        membership_discount_percent = 0
-        membership_discount_amount = 0.0
-        loyalty_discount_amount = 0.0
-        loyalty_points_to_use = 0
-
-        cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-
-        cur.execute("SELECT loyalty_points FROM user WHERE user_id = %s", (session["user_id"],))
-        loyalty_points_data = cur.fetchone()
-        user_current_loyalty_points = loyalty_points_data["loyalty_points"] if loyalty_points_data else 0
-
-        # MEMBERSHIP HANDLING
-        if "checkout_details" in session and session["checkout_details"]["type"] == "membership":
-            membership_fee = session["checkout_details"]["total_price"]
-
-            # 0 fees for session and cart since this is a Membership purchase only
-            session_fee = 0.0
-            cart_fee = 0.0
-
-            # buying a Membership doesn't merit discounts
-            membership_discount_percent = 0
-            membership_discount_amount = 0.0
-            loyalty_discount_amount = 0.0
-            loyalty_points_to_use = 0
-
-        else:
-            # SESSION_USER HANDLING
-            cur.execute("SELECT session_user_id FROM payment WHERE user_id = %s", (session["user_id"],))
-            session_user = cur.fetchone()
-
-            session_price = 0
-            staff_price = 0
-
-            if session_user and session_user["session_user_id"]:
-                session_user_id = session_user["session_user_id"]
-
-                # if user booked for a pending session
-                cur.execute("""
-                    SELECT gs.session_price AS price
-                    FROM golf_session gs
-                    JOIN session_user su ON gs.session_id = su.session_id
-                    WHERE su.session_user_id = %s
-                """, (session_user_id,))
-                golf_session = cur.fetchone()
-
-                if golf_session:
-                    session_price = golf_session["price"]
-
-                    # if driving range, check buckets ordered
-                    cur.execute("""
-                        SELECT buckets
-                        FROM session_user
-                        WHERE session_user_id = %s
-                    """, (session_user_id,))
-                    buckets = cur.fetchone()
-
-                    if buckets and buckets["buckets"] != 0:
-                        session_price += buckets["buckets"] * 300
-
-                # if user asked for a staff
-                cur.execute("""
-                    SELECT staff_id
-                    FROM session_user
-                    WHERE session_user_id = %s
-                """, (session_user_id,))
-                staff = cur.fetchone()
-
-                if staff and staff["staff_id"]:
-                    cur.execute("SELECT service_fee FROM staff WHERE staff_id = %s", (staff["staff_id"],))
-                    staff = cur.fetchone()
-                    if staff:
-                        staff_price = staff["service_fee"]
-
-            # old 'total_session_cost' var; renamed to 'session_fee' to since it's not yet the total and it's part of the 'subtotal' calculation below
-            session_fee = session_price + staff_price
-                
-            # CART HANDLING
-            cur.execute("""
-                    SELECT total_price
-                    FROM cart
-                    WHERE user_id = %s
-                """, (session["user_id"],))
-            cart = cur.fetchone()
-
-            if cart and cart["total_price"]:
-                cart_fee = cart["total_price"]
-
-            # DISCOUNTS ONLY FOR CART CHECKOUT
-            membership_discount_percent = get_user_discount(session["user_id"])
-            membership_discount_amount = (session_fee + cart_fee) * (membership_discount_percent / 100.0)
-
-            # total before loyalty discount
-            total_before_loyalty = (session_fee + cart_fee) - membership_discount_amount
-            # find minimum between user's current loyalty points and the total before loyalty discount (this is to use only what the user has and not exceed)
-            loyalty_points_to_use = min(user_current_loyalty_points, int(total_before_loyalty))
-
-            if loyalty_points_to_use < 0:
-                loyalty_points_to_use = 0
-
-            loyalty_discount_amount = float(loyalty_points_to_use)
-
         cur.close()
-
-        subtotal = membership_fee + session_fee + cart_fee
-        total = subtotal - membership_discount_amount - loyalty_discount_amount
-
-        # Check if a cart has items (cart_id in items table is not null)
-        return render_template("checkout.html", p_membership=php(membership_fee), p_session=php(session_fee), p_cart=php(cart_fee), p_sub_total=php(subtotal), p_discount_percent=membership_discount_percent, p_discount_amount=php(membership_discount_amount), p_loyalty_points_used=loyalty_points_to_use, p_loyalty_discount=php(loyalty_discount_amount), p_total=php(total))
+        # STEP 6: Render checkout summary
+        return render_template("checkout.html", **checkout_context)
 
 
 @app.route("/logout")
@@ -481,21 +348,121 @@ def logout():
     # Redirect user to login form
     return redirect("/")
 
+# LOCAL HELPER FUNCTIONS
+def load_checkout_context(cur, user_id):
+    checkout_context = {
+        "membership_fee": 0,
+        "cart_fee": 0,
+        "session_fee": 0,
+        "discount_percent": 0,
+        "discount_amount": 0,
+        "loyalty_points_used": 0,
+        "loyalty_discount": 0,
+        "subtotal": 0,
+        "total": 0,
+    }
+    session_price = 0
+    staff_price = 0
 
+    # MEMBERSHIP HANDLING
+    if "checkout_details" in session and session["checkout_details"]["type"] == "membership":
+        checkout_context["membership_fee"] = session["checkout_details"]["total_price"]
 
+    # CART HANDLING
+    cur.execute("""
+            SELECT total_price
+            FROM cart
+            WHERE user_id = %s
+        """, (user_id,))
+    cart = cur.fetchone()
 
+    if cart and cart["total_price"]:
+        checkout_context["cart_fee"] = cart["total_price"]
 
-# Local helper function
-def get_user_discount(user_id):
-    """
-    Retrieve the discount percentage for a user based on their active membership tier.
-    """
+    # SESSION HANDLING
+    cur.execute("SELECT session_user_id FROM payment WHERE user_id = %s", (user_id,))
+    session_user = cur.fetchone()
+    
+    # if user_id exists and matches
+    if session_user and session_user["session_user_id"]:
+        # if user booked for a pending session
+        cur.execute("""
+            SELECT gs.session_price AS price
+            FROM golf_session gs
+            JOIN session_user su ON gs.session_id = su.session_id
+            WHERE su.session_user_id = %s
+        """, (user_id,))
+        golf_session = cur.fetchone()
 
-    # Get necessary values for processing
-    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    cur.execute("SELECT membership_tier, membership_end FROM user WHERE user_id = %s", (session["user_id"],))
+        if golf_session:
+            session_price = golf_session["price"]
+
+            # if driving range, check buckets ordered
+            cur.execute("""
+                SELECT buckets
+                FROM session_user
+                WHERE session_user_id = %s
+            """, (user_id,))
+            buckets = cur.fetchone()
+
+            if buckets and buckets["buckets"] != 0:
+                session_price += buckets["buckets"] * 300
+
+        # if user asked for a coach or caddie
+        cur.execute("""
+            SELECT coach_id, caddie_id
+            FROM session_user
+            WHERE session_user_id = %s
+        """, (user_id,))
+        staff = cur.fetchone()
+
+        if staff:
+            staff_price = 0
+            # if coach
+            if staff["coach_id"]:
+                cur.execute("SELECT service_fee FROM staff WHERE staff_id = %s", (staff["coach_id"],))
+                staff_fee = cur.fetchone()
+                if staff_fee:
+                    staff_price += staff_fee["service_fee"]
+            # if caddie
+            if staff["caddie_id"]:
+                cur.execute("SELECT service_fee FROM staff WHERE staff_id = %s", (staff["caddie_id"],))
+                staff_fee = cur.fetchone()
+                if staff_fee:
+                    staff_price += staff_fee["service_fee"]
+    checkout_context["session_fee"] = session_price + staff_price
+    
+    # Exclude membership fee first
+    subtotal = checkout_context["session_fee"] + checkout_context["cart_fee"]
+    checkout_context["subtotal"] = checkout_context["membership_fee"] + subtotal
+
+    # DISCOUNT HANDLING (For cart and session only)
+
+    # Membership Discount
+    checkout_context["discount_percent"] = get_user_discount(cur, user_id)
+    checkout_context["discount_amount"] = (subtotal) * (checkout_context["discount_percent"] / 100.0)
+
+    # Loyalty Points Discount
+    cur.execute("SELECT loyalty_points FROM user WHERE user_id = %s", (user_id,))
     user = cur.fetchone()
-    cur.close()
+
+    loyalty_points = user["loyalty_points"] if user else 0
+    loyalty_points_to_use = min(loyalty_points, int(subtotal - checkout_context["discount_amount"]))
+    
+    checkout_context["loyalty_points_used"] = loyalty_points_to_use
+    checkout_context["loyalty_points_discount"] = loyalty_points_to_use
+
+    # For update_loyalty_points
+    session["loyalty_points_to_use"] = loyalty_points_to_use
+
+    checkout_context["total"] = checkout_context["subtotal"] - checkout_context["discount_amount"] - checkout_context["loyalty_points_discount"]
+
+    return checkout_context
+
+def get_user_discount(cur, user_id):
+    # Get necessary values for processing
+    cur.execute("SELECT membership_tier, membership_end FROM user WHERE user_id = %s", (user_id,))
+    user = cur.fetchone()
 
     # 0 discount if not a user or membership_end is empty
     if not user or not user['membership_end']:
@@ -512,3 +479,48 @@ def get_user_discount(user_id):
 
     # Extract discount through membership_tier
     return MEMBERSHIPS[membership_tier]['discount']
+
+def validate_payment_method(payment_method):
+    method, message = None, None
+
+    if payment_method == "cash":
+        method = "Cash"
+        message = "Pass in the cash to the assigned counter."
+    elif payment_method == "gcash":
+        method = "GCash"
+        message = "Your balance in GCash has been deducted from your payment."
+    elif payment_method == "card":
+        method = "Credit Card"
+        card_name = request.form.get("name")
+        card_number = request.form.get("c_num")
+        expiry_date = request.form.get("exp_date")
+        cvv = request.form.get("cvv")
+
+        # TODO Card info validation
+
+        if not (card_name and card_number and expiry_date and cvv):
+            return apology("Fill in the complete card details.", 400)
+
+        message = "Your balance in your card has been deducted from your payment."
+
+    return method, message
+
+# TODO: JL
+def process_membership_payment(cur, user_id, checkout_context):
+    return
+
+# TODO: Jerry
+def process_cart_payment(cur, user_id, checkout_context):
+    return
+
+# TODO: Ronald
+def process_golf_session_payment(cur, user_id, checkout_context):
+    return
+
+# TODO: JL
+def update_loyalty_points(cur, user_id, checkout_context):
+    return
+
+def cleanup_checkout_session(session):
+    for key in ["checkout_details", "loyalty_points_to_use"]:
+        session.pop(key, None)

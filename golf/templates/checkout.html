@@ -11,40 +11,40 @@
         <div class="col-md-5 d-flex flex-column gap-3">
             <div class="d-flex">
                 <div>Membership Fee</div>
-                <div class="ms-auto"><strong>{{ p_membership }}</strong></div>
+                <div class="ms-auto"><strong>{{ membership_fee | php }}</strong></div>
             </div>
             <div class="d-flex">
                 <div>Session Total Fee</div>
-                <div class="ms-auto"><strong>{{ p_session }}</strong></div>
+                <div class="ms-auto"><strong>{{ session_fee | php }}</strong></div>
             </div>
             <div class="d-flex">
                 <div>Cart Total Fee</div>
-                <div class="ms-auto"><strong>{{ p_cart }}</strong></div>
+                <div class="ms-auto"><strong>{{ cart_fee | php }}</strong></div>
             </div>
 
             <hr class="my-2">
 
             <div class="d-flex">
                 <span class="fs-5">Sub Total</span>
-                <div class="fs-5 ms-auto"><strong>{{ p_sub_total }}</strong></div>
+                <div class="fs-5 ms-auto"><strong>{{ subtotal | php }}</strong></div>
             </div>
 
             <hr class="my-2">
 
             <div class="d-flex">
-                <div>Membership Discount ({{ p_discount_percent }}%)</div>
-                <div class="ms-auto"><strong>-{{ p_discount_amount }}</strong></div>
+                <div>Membership Discount ({{ discount_percent }}%)</div>
+                <div class="ms-auto"><strong>-{{ discount_amount | php }}</strong></div>
             </div>
             <div class="d-flex">
-                <div>Loyalty Points Discount ({{ p_loyalty_points_used }} pts)</div>
-                <div class="ms-auto"><strong>-{{ p_loyalty_discount }}</strong></div>
+                <div>Loyalty Points Discount ({{ loyalty_points_used }} pts)</div>
+                <div class="ms-auto"><strong>-{{ loyalty_discount | php }}</strong></div>
             </div>
 
             <hr class="my-2">
 
             <div class="d-flex">
                 <span class="fs-4"><strong>Total</strong></span>
-                <div class="fs-4 ms-auto"><strong>{{ p_total }}</strong></div>
+                <div class="fs-4 ms-auto"><strong>{{ total | php }}</strong></div>
             </div>
 
 
@@ -68,13 +68,17 @@
             </div>
 
             <div class="d-flex flex-column gap-3">
-                <div d-flex flex-column>
+                <div class="d-flex flex-column">
                     <span class="fs-7">Name on card</span>
                     <input autocomplete="off" autofocus class="form-control" name="name" placeholder="Enter your name" type="text">
                 </div>
-                <div d-flex flex-column>
+                <div class="d-flex flex-column position-relative">
                     <span class="fs-7">Card Number</span>
-                    <input autocomplete="off" autofocus class="form-control" name="c_num" placeholder="Enter your card number" type="text">
+                    <div class="d-flex align-items-center position-relative">
+                        <input autocomplete="off" autofocus class="form-control" id="cardNumber" 
+                            name="c_num" placeholder="Enter your card number" type="text" maxlength="19">
+                        <span id="cardType" class="position-absolute end-0 me-3 text-secondary fw-bold"></span>
+                    </div>
                 </div>
                 <div class="d-flex gap-2">
                     <div class="d-flex flex-fill flex-column">
@@ -95,4 +99,56 @@
 
     </div>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const cardInput = document.getElementById("cardNumber");
+    const cardTypeDisplay = document.getElementById("cardType");
+
+    cardInput.addEventListener("input", function() {
+        const number = cardInput.value.replace(/\s+/g, '');
+        const type = detectCardType(number);
+        const valid = luhnCheck(number);
+
+        if (number.length < 13) {
+            cardTypeDisplay.textContent = "";
+            cardTypeDisplay.style.color = "";
+            return;
+        }
+
+        if (type === "INVALID") {
+            cardTypeDisplay.textContent = valid ? "Unknown" : "Invalid";
+            cardTypeDisplay.style.color = valid ? "gray" : "red";
+        } else {
+            cardTypeDisplay.textContent = valid ? type : "Invalid";
+            cardTypeDisplay.style.color = valid ? "green" : "red";
+        }
+    });
+
+    function detectCardType(number) {
+        if (/^4/.test(number)) return "VISA";
+        if (/^5[1-5]/.test(number)) return "MASTERCARD";
+        if (/^3[47]/.test(number)) return "AMEX";
+        if (/^6(?:011|5)/.test(number)) return "DISCOVER";
+        return "INVALID";
+    }
+
+    function luhnCheck(num) {
+        if (!/^\d+$/.test(num)) return false;
+        let sum = 0;
+        let shouldDouble = false;
+        for (let i = num.length - 1; i >= 0; i--) {
+            let digit = parseInt(num[i]);
+            if (shouldDouble) {
+                digit *= 2;
+                if (digit > 9) digit -= 9;
+            }
+            sum += digit;
+            shouldDouble = !shouldDouble;
+        }
+        return sum % 10 === 0;
+    }
+});
+</script>
+
 {% endblock %}

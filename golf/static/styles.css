@@ -232,3 +232,34 @@ hr {
     color: #000000;
     cursor: pointer;
 }
+
+table {
+  background-color: transparent;
+  margin-bottom: 1rem;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+table th,
+table td {
+  padding: 0.75rem;
+  vertical-align: middle;
+  border-bottom: 1px solid #eee;
+}
+
+thead th:first-child,
+tbody td:first-child,
+tfoot td:first-child {
+  text-align: left;
+}
+
+thead th:not(:first-child),
+tbody td:not(:first-child),
+tfoot td:not(:first-child) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+
+thead th { background: #f8f9fa; font-weight: 600; }
+tbody tr:nth-child(even) { background: #fafafa; }
