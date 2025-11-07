@@ -224,7 +224,7 @@ def booking():
 @app.route("/booking/fairway", methods=["GET", "POST"])
 @login_required
 def fairway():
-    cur = mysql.connection.cursor()
+    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
 
     cur.execute("SELECT * FROM staff WHERE role = 'Coach'")
     coach = cur.fetchall()  
@@ -232,8 +232,54 @@ def fairway():
     cur.execute("SELECT * FROM staff WHERE role = 'Caddie'")
     caddie = cur.fetchall()
 
-    cur.close()
-    return render_template("fairway.html", coach=coach, caddie=caddie)
+    if request.method == "POST":
+        # Booking Handling (iyo toh ronald)
+        
+            # *session and session_user is already created after all error handling
+            # pahingi rin session_id variable pang-reference sa pagbook
+
+        # Staff Handling (assuming that the session that the user booked is available)
+        book_coach = request.form.get("booking-coach")
+
+        # If a user selected a coach
+        if book_coach != 0:
+            cur.execute("SELECT status FROM staff WHERE staff_id = %s", (book_coach,))
+            status_coach = cur.fetchone()
+
+            # If coach is occupied
+            if not status_coach and status_coach["status"] == 'Occupied':
+                return apology("Coach is not available for booking.")
+            
+            # If coach is available
+            cur.execute("""
+                INSERT INTO session_user_id (coach_id)
+                VALUES (%s)
+                WHERE user_id = %s AND session_id = %s
+            """, (book_coach, session["user_id"], session_id))
+            mysql.connection.commit()
+
+        book_caddie = request.form.get("booking-caddie")
+
+        # If a user selected a caddie
+        if book_caddie != 0:
+            cur.execute("SELECT status FROM staff WHERE staff_id = %s", (book_caddie,))
+            status_caddie = cur.fetchone()
+
+            # If caddie is occupied
+            if not status_caddie and status_caddie["status"] == 'Occupied':
+                return apology("Caddie is not available for booking.")
+
+            # If caddie is available
+            cur.execute("""
+                INSERT INTO session_user_id (caddie_id)
+                VALUES (%s)
+                WHERE user_id = %s AND session_id = %s
+            """, (book_coach, session["user_id"], session_id))
+            mysql.connection.commit()
+        cur.close()
+    else:
+        cur.close()
+        return render_template("fairway.html", coach=coach, caddie=caddie)
 
 @app.route("/booking/range", methods=["GET", "POST"])
 @login_required
