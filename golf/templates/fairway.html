@@ -58,40 +58,38 @@
                     <div class="col-md-12">
                         <div class="row align-items-center">
                             <div class="col-8">
-                                <select class="form-select" name="booking-coach">
+                                <select class="form-select" name="booking-coach" id="coach-selector">
                                     <option value="0">No Coach</option>
-                                    {% for s in staff %}
-                                        <option value="{{ s.id }}">{{ s.name }}</option>
+                                    {% for co in coach %}
+                                        <option value="{{ co.staff_id }}" data-status="{{ co.status }}">
+                                            {{ co.name }}
+                                        </option>
                                     {% endfor %}
                                 </select>
                             </div>
                             <div class="col-4">
-                                <p class="h5 fw-bold text-danger mb-0">
-                                    Not Available
-                                </p>
+                                <p class="h5 fw-bold mb-0" id="coach-availability"></p>
                             </div>
                         </div>
                     </div>
                 </div>
-
-                <hr class="my-4">
 
                 <div class="row mb-4">
                     <label for="caddie-selector" class="form-label fw-bold">Caddie</label>
                     <div class="col-md-12">
                         <div class="row align-items-center">
                             <div class="col-8">
-                                <select class="form-select" name="booking-caddie">
+                                <select class="form-select" name="booking-caddie" id="caddie-selector">
                                     <option value="0">No Caddie</option>
-                                    {% for s in staff %}
-                                        <option value="{{ s.id }}">{{ s.name }}</option>
+                                    {% for ca in caddie %}
+                                        <option value="{{ ca.staff_id }}" data-status="{{ ca.status }}">
+                                            {{ ca.name }}
+                                        </option>
                                     {% endfor %}
                                 </select>
                             </div>
                             <div class="col-4">
-                                <p class="h5 fw-bold text-success mb-0">
-                                    Available
-                                </p>
+                                <p class="h5 fw-bold mb-0" id="caddie-availability"></p>
                             </div>
                         </div>
                     </div>
@@ -131,4 +129,49 @@
                 </div>
             </div>
 
-        </div> </form> </div> {% endblock %}
+        </div> 
+    </form> 
+</div> 
+
+<script>
+    function checkStaffAvailability(selectorId, availabilityId) {
+        
+        const selector = document.getElementById(selectorId);
+        const availabilityText = document.getElementById(availabilityId);
+        const selectedOption = selector.options[selector.selectedIndex];
+        const selectedStaffId = selectedOption.value;
+
+        if (selectedStaffId === "0") {
+            availabilityText.textContent = ""; 
+            return;
+        }
+
+        // read the string
+        const staffStatus = selectedOption.dataset.status;
+
+        // updated selected element
+        if (staffStatus === 'Available') {
+            availabilityText.textContent = 'Available';
+            availabilityText.className = 'h5 fw-bold text-success mb-0';
+        } else {
+            availabilityText.textContent = 'Occupied'; 
+            availabilityText.className = 'h5 fw-bold text-danger mb-0';
+        }
+    }
+
+    // 3. ATTACH EVENT LISTENERS
+    const coachSelector = document.getElementById('coach-selector');
+    const caddieSelector = document.getElementById('caddie-selector');
+
+    coachSelector.addEventListener('change', () => {
+        checkStaffAvailability('coach-selector', 'coach-availability');
+    });
+    caddieSelector.addEventListener('change', () => {
+        checkStaffAvailability('caddie-selector', 'caddie-availability');
+    });
+
+    // 4. RUN ON PAGE LOAD
+    checkStaffAvailability('coach-selector', 'coach-availability');
+    checkStaffAvailability('caddie-selector', 'caddie-availability');
+</script>
+{% endblock %}

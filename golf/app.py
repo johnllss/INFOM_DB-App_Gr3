@@ -224,13 +224,16 @@ def booking():
 @app.route("/booking/fairway", methods=["GET", "POST"])
 @login_required
 def fairway():
-    cursor = mysql.connection.cursor()
+    cur = mysql.connection.cursor()
 
-    cursor.execute("SELECT * FROM staff;")
-    staff = cursor.fetchall()  
+    cur.execute("SELECT * FROM staff WHERE role = 'Coach'")
+    coach = cur.fetchall()  
 
-    cursor.close()
-    return render_template("fairway.html", staff=staff)
+    cur.execute("SELECT * FROM staff WHERE role = 'Caddie'")
+    caddie = cur.fetchall()
+
+    cur.close()
+    return render_template("fairway.html", coach=coach, caddie=caddie)
 
 @app.route("/booking/range", methods=["GET", "POST"])
 @login_required
