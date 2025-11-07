@@ -128,7 +128,6 @@ body.homepage-background {
 hr {  
     background-color: #000000; 
     height: 2px;
-    margin-left: 3rem;
 }
 
 .btn-counter {
@@ -136,10 +135,10 @@ hr {
     color: white;
     border: none;
     border-radius: 50%; 
-    width: 40px;
-    height: 40px;
+    width: 30px;
+    height: 30px;
     
-    font-size: 24px;
+    font-size: 14px;
     color: white;
     cursor: pointer;
 }
@@ -152,7 +151,7 @@ hr {
 
 .display-count {
   text-align: center; 
-  font-size: 40px; 
+  font-size: 25px; 
   font-weight: bold;
   color: #000;
   
@@ -162,7 +161,7 @@ hr {
     
   /* Spacing and dimension */
   width: 80px; 
-  margin: 0 10px; /* Space between number and buttons */
+  margin: 10px; /* Space between number and buttons */
 }
 
 table {
@@ -195,3 +194,18 @@ tfoot td:not(:first-child) {
 
 thead th { background: #f8f9fa; font-weight: 600; }
 tbody tr:nth-child(even) { background: #fafafa; }
+
+#date-selector {
+  position: relative;
+}
+
+#date-selector::-webkit-calendar-picker-indicator {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+    
+  opacity: 0;
+  z-index: 1; 
+  cursor: pointer;
+}
+

@@ -1,124 +1,192 @@
 {% extends "layout.html" %}
 
 {% block title %}
-    Range
+    Fairway Booking
 {% endblock %}
 
 {% block main %}
-    <div class="container-fluid">
+<div class="container-fluid px-5">
+    
+    <form action="/booking-range" method="post">
+        
         <div class="row">
-            <h1 class="text-left display-3 fw-bold mt-4 mb-5 ms-5">
-                RANGE BOOKING
+            <h1 class="text-left display-3 fw-bold mt-4 mb-5">
+                Range Booking
             </h1>
-            <div class="col-md-7">
-                <div class="booking-container ms-5">
+
+            <div class="col-lg-7 col-md-12">
+    
+                <div class="row align-items-end mb-4">
                     
-                    <div class="booking-wrapper">
-                        <label for="date-selector">Date:</label>
-                        <input type="date" id="date-selector" name="booking-date">
+                    <div class="col-md-3">
+                        <label for="date-selector" class="form-label fw-bold">Date</label>
+                        <input type="date" id="date-selector" name="booking-date" class="form-select">
                     </div>
                     
-                
-                    <div class="booking-wrapper">
-                        <label for="time-selector">Time:</label>
-                        <select class="booking-selector" name="booking-time">
-                            <option value="09:00">7:00 AM</option>
-                            <option value="10:30">9:00 AM</option>
-                            <option value="13:00">11:00 AM</option>
-                            <option value="17:00">1:00 PM</option>
-                            <option value="19:30">3:00 PM</option>
+                    <div class="col-md-3">
+                        <label for="time-selector" class="form-label fw-bold">Time</label>
+                        <select class="form-select" name="booking-time">
+                            <option value="07:00">7:00 AM</option>
+                            <option value="09:00">9:00 AM</option>
+                            <option value="11:00">11:00 AM</option>
+                            <option value="13:00">1:00 PM</option>
+                            <option value="15:00">3:00 PM</option>
+                            <option value="17:00">5:00 PM</option>
                         </select>
                     </div>
 
-                
-                    <p class="text-left display-5 fw-bold mt-5">
-                        AVAILABLE
-                    </p>
-                
+                    <div class="col-md-3">
+                        <p class="h5 fw-bold text-success mb-0 pb-1">
+                            Available
+                        </p>
+                    </div>
                 </div>
 
-            <hr>
+                <hr>
 
-            </div>
-
-            <div class="col-md-7">
-                <div class="booking-container ms-5">
-
-                    <p class="text-left display-5 fw-bold mt-2">
-                    Buckets of golf balls 
-                    </p>
-
-                    <div class="count-cointainer mt-1">
-                        <button class="btn-counter" id="decreaseBtn" aria-label="Decrease quantity">
+                <div class="row mb-4">
+                    <label for="bucketCount" class="form-label fw-bold">Buckets of golf balls</label>
+                    <div class="count-cointainer" id="bucketCount">
+                        <button type="button" class="btn-counter" id="decreaseBtn" aria-label="Decrease quantity">
                             &minus;
                         </button>
                         
                         <span class="display-count" id="bucketsAmount">1</span>
                         
-                        <button class="btn-counter" id="increaseBtn" aria-label="Increase quantity">
+                        <button type="button" class="btn-counter" id="increaseBtn" aria-label="Increase quantity">
                             &plus;
                         </button>
                         
                         <input type="hidden" id="hiddenValue" value="1">
                     </div>
-
                 </div>
-            <hr>
+
+                <hr>
+                
+                <div class="row mb-4">
+                    <label for="coach-selector" class="form-label fw-bold">Coach</label>
+                    <div class="col-md-12">
+                        <div class="row align-items-center">
+                            <div class="col-8">
+                                <select class="form-select" name="booking-coach" id="coach-selector">
+                                    <option value="0">No Coach</option>
+                                    {% for co in coach %}
+                                        <option value="{{ co.staff_id }}" data-status="{{ co.status }}">
+                                            {{ co.name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-4">
+                                <p class="h5 fw-bold mb-0" id="coach-availability"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <hr>
+
             </div>
 
-            <div class="col-md-7">
-                <div class="booking-container ms-5">
-                    <div class="booking-wrapper">
-                        <label for="coach-selector">Coach:</label>
-                        <select class="staff-selector" name="booking-coach">
-                            <option value="1">Jose Gabriel Espineli</option>
-                            <option value="2">Jerry King Deveza</option>
-                            <option value="3">John Lloyd Sunga</option>
-                            <option value="4">Ronald Gabriel Leoncio</option>
-                        </select>
+            <div class="col-lg-5 col-md-12">
+                <div class="border rounded p-4">
+                    <h3 class="mb-4">Order Summary</h3>
+
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Round</span>
+                        <strong>P67</strong>
                     </div>
 
-                
-                    <p class="text-left display-5 fw-bold mt-4">
-                        AVAILABLE
-                    </p>
-                
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Coach</span>
+                        <strong>P67</strong>
+                    </div>
+
+                    <div class="d-flex justify-content-between mb-3">
+                        <span>Caddie</span>
+                        <strong>P67</strong>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex justify-content-between h4 fw-bold my-3">
+                        <span>Total</span>
+                        <span>P67</span>
+                    </div>
+                    
+                    <button class="btn btn-green w-100" type="submit">Checkout Now</button>
                 </div>
-
-            <hr>
-
             </div>
 
+        </div> 
+    </form> 
+</div> 
 
-        </div>
-    </div>
+<script>
+    const decreaseBtn = document.getElementById('decreaseBtn');
+    const displayAmount = document.getElementById('bucketsAmount');
+    const increaseBtn = document.getElementById('increaseBtn');
+    const realAmount = document.getElementById('hiddenValue');
 
-    <script>
-        const decreaseBtn = document.getElementById('decreaseBtn');
-        const displayAmount = document.getElementById('bucketsAmount');
-        const increaseBtn = document.getElementById('increaseBtn');
-        const realAmount = document.getElementById('hiddenValue');
+    function updateQuantity(addend) {
+        let curVal = parseInt(displayAmount.textContent); 
+        let newVal = curVal + addend;
 
-        function updateQuantity(addend) {
-            let curVal = parseInt(displayAmount.textContent); 
-            let newVal = curVal + addend;
+        if (newVal < 1) {
+            newVal = 1;
+        }
+        
+        displayAmount.textContent = newVal;
+        realAmount.value = newVal; 
+    }
 
-            if (newVal < 1) {
-                newVal = 1;
-            }
-            
-            displayAmount.textContent = newVal;
-            realAmount.value = newVal; 
+    // Attach listeners
+    increaseBtn.addEventListener('click', function() {
+        updateQuantity(1); // Increase by 1
+    });
+
+    decreaseBtn.addEventListener('click', function() {
+        updateQuantity(-1); // Decrease by 1
+    });
+
+    function checkStaffAvailability(selectorId, availabilityId) {
+        
+        const selector = document.getElementById(selectorId);
+        const availabilityText = document.getElementById(availabilityId);
+        const selectedOption = selector.options[selector.selectedIndex];
+        const selectedStaffId = selectedOption.value;
+
+        if (selectedStaffId === "0") {
+            availabilityText.textContent = ""; 
+            return;
         }
 
-        // Attach listeners
-        increaseBtn.addEventListener('click', function() {
-            updateQuantity(1); // Increase by 1
-        });
+        // read the string
+        const staffStatus = selectedOption.dataset.status;
 
-        decreaseBtn.addEventListener('click', function() {
-            updateQuantity(-1); // Decrease by 1
-        });
-    </script>
-    
-{% endblock %}  
+        // updated selected element
+        if (staffStatus === 'Available') {
+            availabilityText.textContent = 'Available';
+            availabilityText.className = 'h5 fw-bold text-success mb-0';
+        } else {
+            availabilityText.textContent = 'Occupied'; 
+            availabilityText.className = 'h5 fw-bold text-danger mb-0';
+        }
+    }
+
+    // 3. ATTACH EVENT LISTENERS
+    const coachSelector = document.getElementById('coach-selector');
+    const caddieSelector = document.getElementById('caddie-selector');
+
+    coachSelector.addEventListener('change', () => {
+        checkStaffAvailability('coach-selector', 'coach-availability');
+    });
+    caddieSelector.addEventListener('change', () => {
+        checkStaffAvailability('caddie-selector', 'caddie-availability');
+    });
+
+    // 4. RUN ON PAGE LOAD
+    checkStaffAvailability('coach-selector', 'coach-availability');
+    checkStaffAvailability('caddie-selector', 'caddie-availability');
+</script>
+{% endblock %}
