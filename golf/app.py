@@ -254,8 +254,11 @@ def account():
     
     # GAME STATISTICS INFO (get best game out of all the sessions)
     # TODO: extract from DB the Longest Driving Range and the Date of when it happened
+    cur.execute("SELECT ")
     # TODO: extract from DB the Highest Fairway Score and the Date of when it happened
-    # TODO: extract from DB the Months Subscribed and the Date of when it happened
+    # Row 3
+    months_subscribed = user['months_subscribed']
+    membership_end = user['membership_end']
 
     # FAIRWAY INFO (Limit 4 rows for display)
     # TODO: extract from DB the Hole number, the Score, and the Date of when it happened
@@ -271,7 +274,7 @@ def account():
 
     # note: fairway info and driving range info should display data from most recent 4 sessions down to least recent 4 sessions
 
-    return render_template("account.html", first_name=first_name, last_name=last_name, tier=tier, loyalty_points=loyalty_points)
+    return render_template("account.html", first_name=first_name, last_name=last_name, tier=tier, loyalty_points=loyalty_points, months_subscribed=months_subscribed, membership_end=membership_end)
 
 @app.route("/history")
 @login_required
