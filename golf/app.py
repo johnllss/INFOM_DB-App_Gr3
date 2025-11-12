@@ -505,7 +505,6 @@ def validate_payment_method(payment_method):
 
     return method, message
 
-# TODO: JL
 def process_membership_payment(cur, user_id):
 # UPDATING OF USER'S MEMBERSHIP tier AND membership_end
     # extract membership details from session through 
@@ -543,8 +542,6 @@ def process_membership_payment(cur, user_id):
     # now, create the payment record
     cur.execute("INSERT INTO payment (total_price, date_paid, payment_method, status, discount_applied, user_id, cart_id, session_user_id) VALUES (%s, NOW(), %s, 'Paid', 0.00, %s, NULL, NULL)", (total_price, payment_method_enum, user_id))
 
-    return
-
 # TODO: Jerry
 def process_cart_payment(cur, user_id, checkout_context):
     return
@@ -555,6 +552,19 @@ def process_golf_session_payment(cur, user_id, checkout_context):
 
 # TODO: JL
 def update_loyalty_points(cur, user_id, checkout_context):
+    # get points earned from total paid in the transaction
+    payment_total = checkout_context("total")
+    points_earned = int(payment_total/10)
+
+    # extract loyalty points used in the transaction
+    loyalty_points_used = session.get("loyalty_points_to_use", 0)
+
+    # update user's loyalty points balance
+    net_loyalty_points = points_earned - loyalty_points_used # net change in loyalty points
+
+    # actual updating
+    cur.execute("UPDATE user SET loyalty_points = loyalty_points + %s WHERE user_id = %s", (net_loyalty_points, user_id))
+
     return
 
 def cleanup_checkout_session(session):
