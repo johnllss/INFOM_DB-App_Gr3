@@ -507,6 +507,7 @@ def validate_payment_method(payment_method):
 
 # TODO: JL
 def process_membership_payment(cur, user_id):
+# UPDATING OF USER'S MEMBERSHIP tier AND membership_end
     # extract membership details from session through 
     checkout_details = session.get("checkout_details", {})
     tier = checkout_details.get("tier")
@@ -533,6 +534,14 @@ def process_membership_payment(cur, user_id):
 
     # finally, update user's new tier and membership_end in the User table
     cur.execute("UPDATE user SET tier = %s, membership_end = %s WHERE user_id = %s", (tier, new_membership_end, user_id))
+
+# CREATING OF RECORD IN payment TABLE
+    # extract payment method 
+    payment_method = request.form.get("method")
+    payment_method_enum, message = validate_payment_method(payment_method)
+    
+    # now, create the payment record
+    cur.execute("INSERT INTO payment (total_price, date_paid, payment_method, status, discount_applied, user_id, cart_id, session_user_id) VALUES (%s, NOW(), %s, 'Paid', 0.00, %s, NULL, NULL)", (total_price, payment_method_enum, user_id))
 
     return
 
