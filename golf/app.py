@@ -253,9 +253,11 @@ def account():
     loyalty_points = user['loyalty_points']
     
     # GAME STATISTICS INFO (get best game out of all the sessions)
-    # TODO: extract from DB the Longest Driving Range and the Date of when it happened
-    cur.execute("SELECT ")
+    # TODO: extract from DB the Longest Driving Range and the Date of when it 
+    cur.execute("SELECT longest_range, score_fairway FROM session_user su JOIN golf_session gs ON su.session_id = gs.session_id JOIN user u ON gs.user_id = u.user_id WHERE user_id = %s", (session['user_id'],))
+
     # TODO: extract from DB the Highest Fairway Score and the Date of when it happened
+
     # Row 3
     months_subscribed = user['months_subscribed']
     membership_end = user['membership_end']
