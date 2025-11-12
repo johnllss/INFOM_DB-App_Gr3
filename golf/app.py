@@ -224,102 +224,18 @@ def booking():
 @app.route("/booking/fairway", methods=["GET", "POST"])
 @login_required
 def fairway():
-    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor = mysql.connection.cursor()
 
-    cur.execute("SELECT * FROM staff WHERE role = 'Coach'")
-    coach = cur.fetchall()  
+    cursor.execute("SELECT * FROM staff;")
+    staff = cursor.fetchall()  
 
-    cur.execute("SELECT * FROM staff WHERE role = 'Caddie'")
-    caddie = cur.fetchall()
-
-    if request.method == "POST":
-        # Booking Handling (iyo toh ronald)
-        
-            # *session and session_user is already created after all error handling
-            # pahingi rin session_id variable pang-reference sa pagbook
-        
-
-
-        # Staff Handling (assuming that the session that the user booked is available)
-        # If a user selected a coach
-        if book_coach != 0:
-            cur.execute("SELECT status FROM staff WHERE staff_id = %s", (book_coach,))
-            status_coach = cur.fetchone()
-
-            # If coach is occupied
-            if not status_coach and status_coach["status"] == 'Occupied':
-                return apology("Coach is not available for booking.")
-            
-            # If coach is available
-            cur.execute("""
-                INSERT INTO session_user_id (coach_id)
-                VALUES (%s)
-                WHERE user_id = %s AND session_id = %s
-            """, (book_coach, session["user_id"], session_id))
-            mysql.connection.commit()
-
-        book_caddie = request.form.get("booking-caddie")
-
-        # If a user selected a caddie
-        if book_caddie != 0:
-            cur.execute("SELECT status FROM staff WHERE staff_id = %s", (book_caddie,))
-            status_caddie = cur.fetchone()
-
-            # If caddie is occupied
-            if not status_caddie and status_caddie["status"] == 'Occupied':
-                return apology("Caddie is not available for booking.")
-
-            # If caddie is available
-            cur.execute("""
-                INSERT INTO session_user_id (caddie_id)
-                VALUES (%s)
-                WHERE user_id = %s AND session_id = %s
-            """, (book_coach, session["user_id"], session_id))
-            mysql.connection.commit()
-        cur.close()
-    else:
-        cur.close()
-        return render_template("fairway.html", coach=coach, caddie=caddie)
+    cursor.close()
+    return render_template("fairway.html", staff=staff)
 
 @app.route("/booking/range", methods=["GET", "POST"])
 @login_required
 def range():
-    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-
-    cur.execute("SELECT * FROM staff WHERE role = 'Coach'")
-    coach = cur.fetchall()
-
-    if request.method == "POST":
-        # Booking Handling (iyo toh ronald)
-        
-            # *session and session_user is already created after all error handling
-            # pahingi rin session_id variable pang-reference sa pagbook
-
-        # Staff Handling (assuming that the session that the user booked is available)
-        book_coach = request.form.get("booking-coach")
-
-        # If a user selected a coach
-        if book_coach != 0:
-            cur.execute("SELECT status FROM staff WHERE staff_id = %s", (book_coach,))
-            status_coach = cur.fetchone()
-
-            # If coach is occupied
-            if not status_coach and status_coach["status"] == 'Occupied':
-                return apology("Coach is not available for booking.")
-            
-            # If coach is available
-            cur.execute("""
-                INSERT INTO session_user_id (coach_id)
-                VALUES (%s)
-                WHERE user_id = %s AND session_id = %s
-            """, (book_coach, session["user_id"], session_id))
-            mysql.connection.commit()
-
-        book_caddie = request.form.get("booking-caddie")
-        cur.close()
-    else:
-        cur.close()
-        return render_template("range.html", coach=coach)
+    return render_template("range.html")
 
 # Account
 @app.route("/account")
@@ -389,7 +305,7 @@ def checkout():
             # Process payments modularly
             
             if checkout_context["membership_fee"] != 0:
-                process_membership_payment(cur, user_id, checkout_context)
+                process_membership_payment(cur, user_id)
                 pass
 
             if checkout_context["cart_fee"] != 0:
@@ -590,7 +506,34 @@ def validate_payment_method(payment_method):
     return method, message
 
 # TODO: JL
-def process_membership_payment(cur, user_id, checkout_context):
+def process_membership_payment(cur, user_id):
+    # extract membership details from session through 
+    checkout_details = session.get("checkout_details", {})
+    tier = checkout_details.get("tier")
+    months = checkout_details.get("months")
+    total_price = checkout_details.get("total_price")
+
+    # no membership purchase
+    if not tier or not months:
+        return 
+    
+    cur.execute("SELECT membership_end FROM user WHERE user_id = %s", (user_id,))
+    user = cur.fetchone()
+
+    # get user's current membership end date, else None
+    current_user_membership_end = user["membership_end"] if user and user["membership_end"] else None
+
+    #calculate user's new membership_end date
+    if current_user_membership_end and current_user_membership_end > datetime.now().date():
+        # extend from current membership_end
+        new_membership_end = current_user_membership_end + timedelta(days = 30 * months)
+    else:
+        # start from today
+        new_membership_end = current_user_membership_end + timedelta(days=30 * months) 
+
+    # finally, update user's new tier and membership_end in the User table
+    cur.execute("UPDATE user SET tier = %s, membership_end = %s WHERE user_id = %s", (tier, new_membership_end, user_id))
+
     return
 
 # TODO: Jerry
