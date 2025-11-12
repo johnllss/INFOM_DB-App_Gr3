@@ -242,34 +242,36 @@ def range():
 @login_required
 def account():
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    cur.execute("SELECT first_name, last_name FROM user WHERE user_id = %s", (session['user_id'],))
+    cur.execute("SELECT first_name, last_name, membership_tier, loyalty_points FROM user WHERE user_id = %s", (session['user_id'],))
     user = cur.fetchone()
     cur.close()
 
     # MAIN INFO
     first_name = user['first_name']
     last_name = user['last_name']
-    # TODO: extract from DB the Membership Tier
-    # TODO: extract from DB the number of Loyalty Points
+    tier = user['membership_tier']
+    loyalty_points = user['loyalty_points']
     
-    # GAME STATISTICS INFO
+    # GAME STATISTICS INFO (get best game out of all the sessions)
     # TODO: extract from DB the Longest Driving Range and the Date of when it happened
     # TODO: extract from DB the Highest Fairway Score and the Date of when it happened
     # TODO: extract from DB the Months Subscribed and the Date of when it happened
 
-    # FAIRWAY INFO (Limit 4 for display)
+    # FAIRWAY INFO (Limit 4 rows for display)
     # TODO: extract from DB the Hole number, the Score, and the Date of when it happened
     # TODO: extract from DB the Hole number, the Score, and the Date of when it happened
     # TODO: extract from DB the Hole number, the Score, and the Date of when it happened
     # TODO: extract from DB the Hole number, the Score, and the Date of when it happened
 
-    # DRIVING RANGE INFO (Limit 4 for display)
+    # DRIVING RANGE INFO (Limit 4 rows for display)
     # TODO: extract from DB the Buckets number, the Range, and the Date of when it happened
     # TODO: extract from DB the Buckets number, the Range, and the Date of when it happened
     # TODO: extract from DB the Buckets number, the Range, and the Date of when it happened
     # TODO: extract from DB the Buckets number, the Range, and the Date of when it happened
 
-    return render_template("account.html", first_name=first_name, last_name=last_name)
+    # note: fairway info and driving range info should display data from most recent 4 sessions down to least recent 4 sessions
+
+    return render_template("account.html", first_name=first_name, last_name=last_name, tier=tier, loyalty_points=loyalty_points)
 
 @app.route("/history")
 @login_required
@@ -550,7 +552,6 @@ def process_cart_payment(cur, user_id, checkout_context):
 def process_golf_session_payment(cur, user_id, checkout_context):
     return
 
-# TODO: JL
 def update_loyalty_points(cur, user_id, checkout_context):
     # get points earned from total paid in the transaction
     payment_total = checkout_context("total")
