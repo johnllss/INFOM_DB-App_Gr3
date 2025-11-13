@@ -202,12 +202,22 @@ def shop():
     cursor = mysql.connection.cursor()
 
     # Query the database
-    cursor.execute("SELECT * FROM item;")
-    items = cursor.fetchall()  
+    item_type = request.args.get('type') 
+    print(item_type) 
+    query = ("SELECT * FROM item WHERE 1=1") 
+    
+    param = [] 
+    if item_type: 
+        if item_type != 'all': 
+            query += "AND type = %s" 
+            param.append(item_type) 
+            
+    cursor.execute(query, param) 
+    items = cursor.fetchall() 
+    cursor.close() # Example count 
+    return render_template("shop.html", items=items)
 
-    cursor.close()
-    cart_items = items[:67]  # Example count
-    return render_template("shop.html", items=items, cart_items=cart_items)
+
 
 # Cart Checkout
 @app.route("/cart", methods=["GET", "POST"])
