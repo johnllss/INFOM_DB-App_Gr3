@@ -203,19 +203,26 @@ def shop():
 
     # Query the database
     item_type = request.args.get('type') 
+    category = request.args.get('category') 
+
     print(item_type) 
     query = ("SELECT * FROM item WHERE 1=1") 
     
     param = [] 
     if item_type: 
         if item_type != 'all': 
-            query += "AND type = %s" 
-            param.append(item_type) 
+            query += " AND type = %s" 
+            param.append(item_type)
+
+    if category:
+        if category != 'All':
+            query += " AND category = %s"
+            params.append(category)
             
     cursor.execute(query, param) 
     items = cursor.fetchall() 
     cursor.close() # Example count 
-    return render_template("shop.html", items=items)
+    return render_template("shop.html", items=items, selected_type=item_type, selected_category=category)
 
 
 
