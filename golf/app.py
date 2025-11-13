@@ -349,9 +349,21 @@ def account():
     loyalty_points = user['loyalty_points']
     
     # GAME STATISTICS INFO (get best game out of all the sessions)
-    # TODO: extract from DB the Longest Driving Range and the Date of when it 
-    cur.execute("SELECT longest_range, score_fairway FROM session_user su JOIN golf_session gs ON su.session_id = gs.session_id JOIN user u ON gs.user_id = u.user_id WHERE user_id = %s", (session['user_id'],))
+# GAME STATISTICS INFO (get best game out of all the sessions)
+    # ROW 1
+    cur.execute("""
+                SELECT su.longest_range as longest_driving_range, DATE_FORMAT(gs.session_schedule, '%%Y-%%m-%%d') as date_achieved
+                FROM session_user su JOIN golf_session gs ON su.session_id = gs.session_id
+                WHERE su.user_id = %s AND su.longest_range IS NOT NULL
+                ORDER BY su.longest_range DESC
+                LIMIT 1
+                """, (session['user_id'],))
+    extracted_longestDR_data = cur.fetchone()
 
+    # default values as fallback for users with no sessions yet
+    user_longest_driving_range = extracted_longestDR_data('longest_driving_range') if extracted_longestDR_data else 0
+    date_of_longest_DR = extracted_longestDR_data('date_achieved') if extracted_longestDR_data else 'N/A'
+    
     # TODO: extract from DB the Highest Fairway Score and the Date of when it happened
 
     # Row 3
