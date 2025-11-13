@@ -348,7 +348,6 @@ def account():
     tier = user['membership_tier']
     loyalty_points = user['loyalty_points']
     
-    # GAME STATISTICS INFO (get best game out of all the sessions)
 # GAME STATISTICS INFO (get best game out of all the sessions)
     # ROW 1
     cur.execute("""
@@ -360,11 +359,11 @@ def account():
                 """, (session['user_id'],))
     extracted_longestDR_data = cur.fetchone()
 
-    # default values as fallback for users with no sessions yet
+        # default values as fallback for users with no sessions yet
     user_longest_driving_range = extracted_longestDR_data('longest_driving_range') if extracted_longestDR_data else 0
     date_of_longest_DR = extracted_longestDR_data('date_achieved') if extracted_longestDR_data else 'N/A'
 
- # ROW 2
+    # ROW 2
     cur.execute("""
                 SELECT su.score_fairway as best_score, DATE_FORMAT(gs.session_schedule, '%%Y-%%m-%%d) as date_achieved
                 FROM session_user su JOIN golf_session gs ON su.session_id = gs.session_id
@@ -374,21 +373,31 @@ def account():
                 """, (session['user_id'],))
     extracted_fairway_date = cur.fetchone()
 
-    # default values as fallback for users with no sessions yet
+        # default values as fallback for users with no sessions yet
     user_best_fairway_score = extracted_fairway_date('best_score') if extracted_fairway_date else 0
     date_of_best_FS = extracted_fairway_date('best_score') if extracted_fairway_date else 0
 
-    # Row 3
-    months_subscribed = user['months_subscribed']
-    membership_end = user['membership_end']
+    # ROW 3
+    cur.execute("""
+                SELECT membership_end, TIMESTAMPDIFF(MONTH, CURDATE(), membership_end) as months_remaining
+                FROM user 
+                WHERE user_id = %s AND membership_end IS NOT NULL
+                """,
+                (session['user_id']))
+    membership = cur.fetchone()
 
-    # FAIRWAY INFO (Limit 4 rows for display)
+        # default values as fallback for users with no sessions yet
+    months_subscribed = membership['months_remaining'] if membership and membership['months_remaining'] > 0 else 0
+    membership_end_date = membership['membership_end'].strftime("%Y-%m-%d") if membership else "N/A"
+
+
+# FAIRWAY INFO (Limit 4 rows for display)
     # TODO: extract from DB the Hole number, the Score, and the Date of when it happened
     # TODO: extract from DB the Hole number, the Score, and the Date of when it happened
     # TODO: extract from DB the Hole number, the Score, and the Date of when it happened
     # TODO: extract from DB the Hole number, the Score, and the Date of when it happened
 
-    # DRIVING RANGE INFO (Limit 4 rows for display)
+# DRIVING RANGE INFO (Limit 4 rows for display)
     # TODO: extract from DB the Buckets number, the Range, and the Date of when it happened
     # TODO: extract from DB the Buckets number, the Range, and the Date of when it happened
     # TODO: extract from DB the Buckets number, the Range, and the Date of when it happened
@@ -396,7 +405,8 @@ def account():
 
     # note: fairway info and driving range info should display data from most recent 4 sessions down to least recent 4 sessions
     cur.close()
-    return render_template("account.html", first_name=first_name, last_name=last_name, tier=tier, loyalty_points=loyalty_points, months_subscribed=months_subscribed, membership_end=membership_end)
+    return render_template("account.html", 
+                           first_name=first_name, last_name=last_name, tier=tier, loyalty_points=loyalty_points, longest_driving_range=user_longest_driving_range, date_of_longest_DR=date_of_longest_DR, best_score=user_best_fairway_score, date_of_best_FS=date_of_best_FS, months_subscribed=months_subscribed, membership_end=membership_end_date)
 
 @app.route("/history")
 @login_required
@@ -644,7 +654,11 @@ def process_membership_payment(cur, user_id):
     if not tier or not months:
         return 
     
-    cur.execute("SELECT membership_end FROM user WHERE user_id = %s", (user_id,))
+    cur.execute("""
+                SELECT membership_end 
+                FROM user 
+                WHERE user_id = %s""", 
+                (user_id,))
     user = cur.fetchone()
 
     # get user's current membership end date, else None
@@ -659,7 +673,12 @@ def process_membership_payment(cur, user_id):
         new_membership_end = current_user_membership_end + timedelta(days=30 * months) 
 
     # finally, update user's new tier and membership_end in the User table
-    cur.execute("UPDATE user SET tier = %s, membership_end = %s WHERE user_id = %s", (tier, new_membership_end, user_id))
+    cur.execute("""
+                UPDATE user 
+                SET tier = %s, membership_end = %s 
+                WHERE user_id = %s
+                """, 
+                (tier, new_membership_end, user_id))
 
 # CREATING OF RECORD IN payment TABLE
     # extract payment method 
