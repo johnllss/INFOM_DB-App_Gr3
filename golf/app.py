@@ -230,7 +230,7 @@ def shop():
 @app.route("/cart", methods=["GET", "POST"])
 @login_required
 def cart():
-    return apology("67 error", 67)
+    return render_template("cart.html")
 
 @app.route("/booking/fairway", methods=["GET", "POST"])
 @login_required
