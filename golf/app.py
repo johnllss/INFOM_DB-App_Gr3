@@ -363,8 +363,20 @@ def account():
     # default values as fallback for users with no sessions yet
     user_longest_driving_range = extracted_longestDR_data('longest_driving_range') if extracted_longestDR_data else 0
     date_of_longest_DR = extracted_longestDR_data('date_achieved') if extracted_longestDR_data else 'N/A'
-    
-    # TODO: extract from DB the Highest Fairway Score and the Date of when it happened
+
+ # ROW 2
+    cur.execute("""
+                SELECT su.score_fairway as best_score, DATE_FORMAT(gs.session_schedule, '%%Y-%%m-%%d) as date_achieved
+                FROM session_user su JOIN golf_session gs ON su.session_id = gs.session_id
+                WHERE su.user_id = %s AND su.score_fairway IS NOT NULL
+                ORDER su.score_fairway DESC
+                LIMIT 1
+                """, (session['user_id'],))
+    extracted_fairway_date = cur.fetchone()
+
+    # default values as fallback for users with no sessions yet
+    user_best_fairway_score = extracted_fairway_date('best_score') if extracted_fairway_date else 0
+    date_of_best_FS = extracted_fairway_date('best_score') if extracted_fairway_date else 0
 
     # Row 3
     months_subscribed = user['months_subscribed']
