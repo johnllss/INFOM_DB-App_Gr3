@@ -232,27 +232,107 @@ def shop():
 def cart():
     return apology("67 error", 67)
 
-# Booking
-@app.route("/booking")
-@login_required
-def booking():
-    return render_template("booking.html")
-
 @app.route("/booking/fairway", methods=["GET", "POST"])
 @login_required
 def fairway():
-    cursor = mysql.connection.cursor()
+    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
 
-    cursor.execute("SELECT * FROM staff;")
-    staff = cursor.fetchall()  
+    cur.execute("SELECT * FROM staff WHERE role = 'Coach'")
+    coach = cur.fetchall()  
 
-    cursor.close()
-    return render_template("fairway.html", staff=staff)
+    cur.execute("SELECT * FROM staff WHERE role = 'Caddie'")
+    caddie = cur.fetchall()
+
+    if request.method == "POST":
+        # Booking Handling (iyo toh ronald)
+        
+            # *session and session_user is already created after all error handling
+            # pahingi rin session_id variable pang-reference sa pagbook
+        
+
+
+        # Staff Handling (assuming that the session that the user booked is available)
+        book_coach = request.form.get("booking-coach")
+
+        # If a user selected a coach
+        if book_coach != 0:
+            cur.execute("SELECT status FROM staff WHERE staff_id = %s", (book_coach,))
+            status_coach = cur.fetchone()
+
+            # If coach is occupied
+            if not status_coach and status_coach["status"] == 'Occupied':
+                return apology("Coach is not available for booking.")
+            
+            # If coach is available
+            cur.execute("""
+                INSERT INTO session_user_id (coach_id)
+                VALUES (%s)
+                WHERE user_id = %s AND session_id = %s
+            """, (book_coach, session["user_id"], session_id))
+            mysql.connection.commit()
+
+        book_caddie = request.form.get("booking-caddie")
+
+        # If a user selected a caddie
+        if book_caddie != 0:
+            cur.execute("SELECT status FROM staff WHERE staff_id = %s", (book_caddie,))
+            status_caddie = cur.fetchone()
+
+            # If caddie is occupied
+            if not status_caddie and status_caddie["status"] == 'Occupied':
+                return apology("Caddie is not available for booking.")
+
+            # If caddie is available
+            cur.execute("""
+                INSERT INTO session_user_id (caddie_id)
+                VALUES (%s)
+                WHERE user_id = %s AND session_id = %s
+            """, (book_coach, session["user_id"], session_id))
+            mysql.connection.commit()
+        cur.close()
+    else:
+        cur.close()
+        return render_template("fairway.html", coach=coach, caddie=caddie)
 
 @app.route("/booking/range", methods=["GET", "POST"])
 @login_required
 def range():
-    return render_template("range.html")
+    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+
+    cur.execute("SELECT * FROM staff WHERE role = 'Coach'")
+    coach = cur.fetchall()
+
+    if request.method == "POST":
+        # Booking Handling (iyo toh ronald)
+        
+            # *session and session_user is already created after all error handling
+            # pahingi rin session_id variable pang-reference sa pagbook
+
+        # Staff Handling (assuming that the session that the user booked is available)
+        book_coach = request.form.get("booking-coach")
+
+        # If a user selected a coach
+        if book_coach != 0:
+            cur.execute("SELECT status FROM staff WHERE staff_id = %s", (book_coach,))
+            status_coach = cur.fetchone()
+
+            # If coach is occupied
+            if not status_coach and status_coach["status"] == 'Occupied':
+                return apology("Coach is not available for booking.")
+            
+            # If coach is available
+            cur.execute("""
+                INSERT INTO session_user_id (coach_id)
+                VALUES (%s)
+                WHERE user_id = %s AND session_id = %s
+            """, (book_coach, session["user_id"], session_id))
+            mysql.connection.commit()
+
+        book_caddie = request.form.get("booking-caddie")
+        cur.close()
+    else:
+        cur.close()
+        return render_template("range.html", coach=coach)
 
 # Account
 @app.route("/account")
@@ -261,7 +341,6 @@ def account():
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cur.execute("SELECT first_name, last_name, membership_tier, loyalty_points FROM user WHERE user_id = %s", (session['user_id'],))
     user = cur.fetchone()
-    cur.close()
 
     # MAIN INFO
     first_name = user['first_name']
@@ -292,7 +371,7 @@ def account():
     # TODO: extract from DB the Buckets number, the Range, and the Date of when it happened
 
     # note: fairway info and driving range info should display data from most recent 4 sessions down to least recent 4 sessions
-
+    cur.close()
     return render_template("account.html", first_name=first_name, last_name=last_name, tier=tier, loyalty_points=loyalty_points, months_subscribed=months_subscribed, membership_end=membership_end)
 
 @app.route("/history")
