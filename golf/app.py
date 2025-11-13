@@ -217,7 +217,7 @@ def shop():
     if category:
         if category != 'All':
             query += " AND category = %s"
-            params.append(category)
+            param.append(category)
             
     cursor.execute(query, param) 
     items = cursor.fetchall() 
