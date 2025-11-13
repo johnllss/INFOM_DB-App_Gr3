@@ -655,30 +655,51 @@ def process_membership_payment(cur, user_id):
         return 
     
     cur.execute("""
-                SELECT membership_end 
+                SELECT membership_start, membership_end 
                 FROM user 
-                WHERE user_id = %s""", 
+                WHERE user_id = %s
+                """, 
                 (user_id,))
     user = cur.fetchone()
 
-    # get user's current membership end date, else None
-    current_user_membership_end = user["membership_end"] if user and user["membership_end"] else None
+    date_today = datetime().now().date()
+    new_membership_start = None
+    new_membership_end = None
 
-    #calculate user's new membership_end date
-    if current_user_membership_end and current_user_membership_end > datetime.now().date():
-        # extend from current membership_end
-        new_membership_end = current_user_membership_end + timedelta(days = 30 * months)
+    # FIRST-TIME SUBSCRIBER
+    if not user['membership_start']:
+        new_membership_start = date_today
+        new_membership_end = date_today + timedelta(days=30 * months)
+
+        cur.execute("""
+                    UPDATE user
+                    SET membership_tier = %s, membership_start = %s, membership_end = %s
+                    WHERE user_id = %s
+                    """, 
+                    (tier, new_membership_start, new_membership_end, user_id))
+
+    # USER RENEWING WHILE THEY HAVE ACTIVE MEMBERSHIP
+    elif user['membership_end'] and user['membership_end'] >= date_today:
+        new_membership_end = date_today + timedelta(days=30 * months)
+
+        cur.execute("""
+                    UPDATE user
+                    SET membership_tier = %s, membership_end = %s
+                    WHERE user_id = %s
+                    """,
+                    (tier, new_membership_end, user_id))
+
+    # RESUBSCRIBERS
     else:
-        # start from today
-        new_membership_end = current_user_membership_end + timedelta(days=30 * months) 
+        new_membership_start = date_today;
+        new_membership_end = date_today + timedelta(days= 30 * months)
 
-    # finally, update user's new tier and membership_end in the User table
     cur.execute("""
-                UPDATE user 
-                SET tier = %s, membership_end = %s 
+                UPDATE user
+                SET membership_tier = %s, membership_start = %s, membership_end = %s
                 WHERE user_id = %s
-                """, 
-                (tier, new_membership_end, user_id))
+                """,
+                (tier, new_membership_start, new_membership_end, user_id))
 
 # CREATING OF RECORD IN payment TABLE
     # extract payment method 
@@ -686,7 +707,11 @@ def process_membership_payment(cur, user_id):
     payment_method_enum, message = validate_payment_method(payment_method)
     
     # now, create the payment record
-    cur.execute("INSERT INTO payment (total_price, date_paid, payment_method, status, discount_applied, user_id, cart_id, session_user_id) VALUES (%s, NOW(), %s, 'Paid', 0.00, %s, NULL, NULL)", (total_price, payment_method_enum, user_id))
+    cur.execute("""
+                INSERT INTO payment (total_price, date_paid, payment_method, status, discount_applied, user_id, cart_id, session_user_id) 
+                VALUES (%s, NOW(), %s, 'Paid', 0.00, %s, NULL, NULL)""",
+                (total_price, payment_method_enum, user_id))
+    # TODO cart_id and session_user_id might need to be extracted
 
 # TODO: Jerry
 def process_cart_payment(cur, user_id, checkout_context):
@@ -708,7 +733,11 @@ def update_loyalty_points(cur, user_id, checkout_context):
     net_loyalty_points = points_earned - loyalty_points_used # net change in loyalty points
 
     # actual updating
-    cur.execute("UPDATE user SET loyalty_points = loyalty_points + %s WHERE user_id = %s", (net_loyalty_points, user_id))
+    cur.execute("""
+                UPDATE user 
+                SET loyalty_points = loyalty_points + %s 
+                WHERE user_id = %s""", 
+                (net_loyalty_points, user_id))
 
     return
 
