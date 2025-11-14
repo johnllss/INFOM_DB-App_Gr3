@@ -232,6 +232,12 @@ def shop():
 def cart():
     return render_template("cart.html")
 
+@app.route("/booking", methods=["GET", "POST"])
+@login_required
+def booking():
+    return render_template("booking.html")
+
+
 @app.route("/booking/fairway", methods=["GET", "POST"])
 @login_required
 def fairway():
