@@ -374,7 +374,7 @@ def account():
                 SELECT su.score_fairway as best_score, DATE_FORMAT(gs.session_schedule, '%%Y-%%m-%%d) as date_achieved
                 FROM session_user su JOIN golf_session gs ON su.session_id = gs.session_id
                 WHERE su.user_id = %s AND su.score_fairway IS NOT NULL
-                ORDER su.score_fairway DESC
+                ORDER BY su.score_fairway ASC
                 LIMIT 1
                 """, (session['user_id'],))
     extracted_fairway_date = cur.fetchone()
@@ -385,34 +385,45 @@ def account():
 
     # ROW 3
     cur.execute("""
-                SELECT membership_end, TIMESTAMPDIFF(MONTH, CURDATE(), membership_end) as months_remaining
+                SELECT TIMESTAMPDIFF(MONTH, CURDATE(), membership_end) as months_remaining, membership_end
                 FROM user 
                 WHERE user_id = %s AND membership_end IS NOT NULL
                 """,
-                (session['user_id']))
-    membership = cur.fetchone()
+                (session['user_id'],))
+    extracted_membership_data = cur.fetchone()
 
         # default values as fallback for users with no sessions yet
-    months_subscribed = membership['months_remaining'] if membership and membership['months_remaining'] > 0 else 0
-    membership_end_date = membership['membership_end'].strftime("%Y-%m-%d") if membership else "N/A"
+    months_subscribed = extracted_membership_data['months_remaining'] if extracted_membership_data and extracted_membership_data['months_remaining'] > 0 else 0
+    membership_end_date = extracted_membership_data['membership_end'].strftime("%Y-%m-%d") if extracted_membership_data else "N/A"
 
 
 # FAIRWAY INFO (Limit 4 rows for display)
-    # TODO: extract from DB the Hole number, the Score, and the Date of when it happened
-    # TODO: extract from DB the Hole number, the Score, and the Date of when it happened
-    # TODO: extract from DB the Hole number, the Score, and the Date of when it happened
-    # TODO: extract from DB the Hole number, the Score, and the Date of when it happened
+# note: fairway info info should display data from most recent 4 sessions down to least recent 4 sessions
+    cur.execute("""
+                SELECT gs.holes as holes, su.score_fairway as score, DATE_FORMAT(gs.session_schedule, '%%Y-%%m-%%d') as date_played
+                FROM session_user su JOIN golf_session gs ON su.session_id = gs.session_id
+                WHERE user_id = %s AND gs.type = 'Fairway' AND su.score_fairway IS NOT NULL
+                ORDER BY gs.session_schedule DESC
+                LIMIT 4
+                """,
+                (session['user_id'],))
+    extracted_fairway_hole_data = cur.fetchall()
 
 # DRIVING RANGE INFO (Limit 4 rows for display)
-    # TODO: extract from DB the Buckets number, the Range, and the Date of when it happened
-    # TODO: extract from DB the Buckets number, the Range, and the Date of when it happened
-    # TODO: extract from DB the Buckets number, the Range, and the Date of when it happened
-    # TODO: extract from DB the Buckets number, the Range, and the Date of when it happened
+# note: driving range info should display data from most recent 4 sessions down to least recent 4 sessions
+    cur.execute("""
+                SELECT su.buckets as buckets, su.longest_range as range, DATE_FORMAT(gs.session_schedule, '%%Y-%%m-%%d') as date_played
+                FROM session_user su JOIN golf_session gs ON su.session_id = gs.session_id
+                WHERE user_id = %s AND gs.type = 'Driving Range' AND su.longest_range IS NOT NULL
+                ORDER BY gs.session_schedule DESC
+                LIMIT 4
+                """,
+                (session['user_id']))
+    extracted_driving_range_bucket_date = cur.fetchall()
 
-    # note: fairway info and driving range info should display data from most recent 4 sessions down to least recent 4 sessions
     cur.close()
     return render_template("account.html", 
-                           first_name=first_name, last_name=last_name, tier=tier, loyalty_points=loyalty_points, longest_driving_range=user_longest_driving_range, date_of_longest_DR=date_of_longest_DR, best_score=user_best_fairway_score, date_of_best_FS=date_of_best_FS, months_subscribed=months_subscribed, membership_end=membership_end_date)
+                           first_name=first_name, last_name=last_name, tier=tier, loyalty_points=loyalty_points, longest_driving_range=user_longest_driving_range, date_of_longest_DR=date_of_longest_DR, best_score=user_best_fairway_score, date_of_best_FS=date_of_best_FS, months_subscribed=months_subscribed, membership_end=membership_end_date, fairway_sessions=extracted_fairway_hole_data, driving_range_sessions=extracted_driving_range_bucket_date)
 
 @app.route("/history")
 @login_required
