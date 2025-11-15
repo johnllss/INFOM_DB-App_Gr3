@@ -94,19 +94,24 @@
 
                     <div class="d-flex justify-content-between mb-2">
                         <span>Range</span>
-                        <strong>P1000</strong>
+                        <strong>₱1000</strong>
+                    </div>
+
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Buckets</span>
+                        <strong id="buckets-price">₱300</strong>
                     </div>
 
                     <div class="d-flex justify-content-between mb-2">
                         <span>Coach</span>
-                        <strong id="coach-price">P0</strong>
+                        <strong id="coach-price">₱0</strong>
                     </div>
 
                     <hr>
 
                     <div class="d-flex justify-content-between h4 fw-bold my-3">
                         <span>Total</span>
-                        <span id ="total-price">P1300</span>
+                        <span id ="total-price">₱1300</span>
                     </div>
                     
                     <button class="btn btn-green w-100" type="submit">Checkout Now</button>
@@ -147,12 +152,12 @@
     });
 
     function checkStaff(selectorId, availabilityId) {
-        
+        const coachText = document.getElementById("coach-price");
         const selector = document.getElementById(selectorId);
         const availabilityText = document.getElementById(availabilityId);
         const selectedOption = selector.options[selector.selectedIndex];
         const selectedStaffId = selectedOption.value;
-        const selectedStaffPrice = selectedOption.fee;
+        const selectedStaffPrice = parseFloat(selectedOption.getAttribute('fee'));
 
         if (selectedStaffId === "0") {
             availabilityText.textContent = ""; 
@@ -171,7 +176,8 @@
             availabilityText.className = 'h5 fw-bold text-danger mb-0';
         }
 
-        return selectedStaffPrice
+        coachText.textContent = `₱${selectedStaffPrice}`;
+        return selectedStaffPrice;
     }
 
     // 3. ATTACH EVENT LISTENERS
@@ -180,17 +186,21 @@
 
     coachSelector.addEventListener('change', () => {
         checkStaff('coach-selector', 'coach-availability');
+        getPrice()
     });
 
     // 4. RUN ON PAGE LOAD
     checkStaff('coach-selector', 'coach-availability');
 
-    const priceText = document.getElementById('total-price');
     function getPrice() {
-        bucketsPrice = realAmount * 300;
+        const totalText = document.getElementById('total-price');
+        const bucketsText = document.getElementById("buckets-price");
+        const currentQuantity = parseInt(document.getElementById('hiddenValue').value);
         coachPrice = checkStaff('coach-selector', 'coach-availability');
-        total = bucketsPrice + coachPrice + 5000;
-        priceText.textContent = total;
+        bucketsPrice = currentQuantity * 300;
+        total = bucketsPrice + coachPrice + 1000;
+        bucketsText.textContent = `₱${bucketsPrice}`;
+        totalText.textContent = `₱${total}`;
     }
 </script>
 {% endblock %}
