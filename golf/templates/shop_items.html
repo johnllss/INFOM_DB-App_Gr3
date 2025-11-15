@@ -3,11 +3,10 @@
       <div class="list-group-item d-flex justify-content-between align-items-center">
         <div>
           <h5 class="mb-1">{{ item.name }}</h5>
-          <small class="text-muted">{{ item.description }}</small>
         </div>
         <div class="text-end">
           <strong>₱{{ "%.2f"|format(item.price) }}</strong>
-          <button class="btn btn-success ms-3 add-btn" onclick="addToCart({{ item.item_id }}, this)">Add To Cart</button>
+          <button class="btn btn-success ms-3 add-btn" onclick="addToCart('{{ item.item_id }}', this)">Add To Cart</button>
         </div>
       </div>
     {% else %}
@@ -17,5 +16,21 @@
 
 <script>
   function addToCart(itemID, btn){
-    fetch
+    fetch("/api/add_to_cart", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ id: itemID })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === "success") {
+
+            // remove item from page
+            btn.closest(".list-group-item").remove();
+        } else {
+            alert("Error adding to cart.");
+        }
+    })
+    .catch(err => console.error(err));
   }
+</script>

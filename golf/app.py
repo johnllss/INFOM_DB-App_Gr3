@@ -226,6 +226,41 @@ def shop():
 
 
 
+@app.route("/api/add_to_cart", methods=["POST"])
+@login_required
+def add_to_cart():
+    
+    data = request.get_json()
+    if not data or "id" not in data:
+        return {"status": "error", "message": "Invalid request"}, 400
+
+    item_id = data["id"]
+
+    cursor = mysql.connection.cursor()
+    cursor.execute("SELECT item_id, name, price FROM item WHERE item_id = %s", (item_id,))
+    item = cursor.fetchone()
+
+    if not item:
+        cursor.close()
+        return {"status": "error", "message": "Item not found"}, 404
+
+    cursor.execute("SELECT cart_id FROM cart WHERE user_id = %s", (session["user_id"],))
+    cart = cursor.fetchone()
+
+    if not cart:
+        cursor.close()
+        return {"status": "error", "message": "Cart not found"}, 404
+
+    cart_id = cart["cart_id"]
+
+    cursor.execute("UPDATE item SET cart_id = %s WHERE item_id = %s", (cart_id, item_id))
+    mysql.connection.commit()
+
+    cursor.close()
+    return{"status": "success"}
+
+
+
 # Cart Checkout
 @app.route("/cart", methods=["GET", "POST"])
 @login_required
