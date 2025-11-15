@@ -266,9 +266,22 @@ def add_to_cart():
 @login_required
 def cart():
         
-    cart_items = session.get('cart', [])
+    cursor = mysql.connection.cursor()
 
-    total = sum(item['price'] * item['quantity'] for item in cart_items)
+    cursor.execute("SELECT cart_id FROM cart WHERE user_id = %s", (session["user_id"],))
+    cart = cursor.fetchone()
+
+    if cart:
+        cart_id = cart['cart_id']
+        cursor.execute("SELECT * FROM item WHERE cart_id = %s", (cart_id,))
+        cart_items = cursor.fetchall()
+    else:
+        cart_items = []
+
+    cursor.close()
+
+    # Calculate total
+    total = 67
 
     return render_template("cart.html", cart_items=cart_items, total=total)
 
