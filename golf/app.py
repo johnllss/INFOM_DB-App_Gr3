@@ -230,7 +230,12 @@ def shop():
 @app.route("/cart", methods=["GET", "POST"])
 @login_required
 def cart():
-    return render_template("cart.html")
+        
+    cart_items = session.get('cart', [])
+
+    total = sum(item['price'] * item['quantity'] for item in cart_items)
+
+    return render_template("cart.html", cart_items=cart_items, total=total)
 
 @app.route("/booking", methods=["GET", "POST"])
 @login_required

@@ -7,10 +7,15 @@
         </div>
         <div class="text-end">
           <strong>₱{{ "%.2f"|format(item.price) }}</strong>
-          <a href="/add_to_cart/{{ item.id }}" class="btn btn-success ms-3">Add To Cart</a>
+          <button class="btn btn-success ms-3 add-btn" onclick="addToCart({{ item.item_id }}, this)">Add To Cart</button>
         </div>
       </div>
     {% else %}
       <p>No items available.</p>
     {% endfor %}
 </div>
+
+<script>
+  function addToCart(itemID, btn){
+    fetch
+  }
