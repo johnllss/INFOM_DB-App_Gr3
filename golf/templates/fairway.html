@@ -61,7 +61,7 @@
                                 <select class="form-select" name="booking-coach" id="coach-selector">
                                     <option value="0">No Coach</option>
                                     {% for co in coach %}
-                                        <option value="{{ co.staff_id }}" data-status="{{ co.status }}">
+                                        <option value="{{ co.staff_id }}" data-status="{{ co.status }}" fee="{{ co.service_fee }}">
                                             {{ co.name }}
                                         </option>
                                     {% endfor %}
@@ -82,7 +82,7 @@
                                 <select class="form-select" name="booking-caddie" id="caddie-selector">
                                     <option value="0">No Caddie</option>
                                     {% for ca in caddie %}
-                                        <option value="{{ ca.staff_id }}" data-status="{{ ca.status }}">
+                                        <option value="{{ ca.staff_id }}" data-status="{{ ca.status }}" fee="{{ ca.service_fee }}">
                                             {{ ca.name }}
                                         </option>
                                     {% endfor %}
@@ -105,24 +105,24 @@
 
                     <div class="d-flex justify-content-between mb-2">
                         <span>Round</span>
-                        <strong>P67</strong>
+                        <strong>₱5000</strong>
                     </div>
 
                     <div class="d-flex justify-content-between mb-2">
                         <span>Coach</span>
-                        <strong>P67</strong>
+                        <strong id="coach-text">₱0</strong>
                     </div>
 
                     <div class="d-flex justify-content-between mb-3">
                         <span>Caddie</span>
-                        <strong>P67</strong>
+                        <strong id="caddie-text">₱0</strong>
                     </div>
 
                     <hr>
 
                     <div class="d-flex justify-content-between h4 fw-bold my-3">
                         <span>Total</span>
-                        <span>P67</span>
+                        <span id="total-price">₱5000</span>
                     </div>
                     
                     <button class="btn btn-green w-100" type="submit">Checkout Now</button>
@@ -134,16 +134,17 @@
 </div> 
 
 <script>
-    function checkStaffAvailability(selectorId, availabilityId) {
-        
+    function checkStaffAvailability(selectorId, availabilityId, textID) {
         const selector = document.getElementById(selectorId);
         const availabilityText = document.getElementById(availabilityId);
+        const staffPriceText = document.getElementById(textID);
         const selectedOption = selector.options[selector.selectedIndex];
         const selectedStaffId = selectedOption.value;
+        const staffPrice = parseFloat(selectedOption.getAttribute('fee'));
 
         if (selectedStaffId === "0") {
             availabilityText.textContent = ""; 
-            return;
+            return 0; 
         }
 
         // read the string
@@ -157,6 +158,9 @@
             availabilityText.textContent = 'Occupied'; 
             availabilityText.className = 'h5 fw-bold text-danger mb-0';
         }
+
+        staffPriceText.textContent = `₱${staffPrice}`; 
+        return staffPrice;
     }
 
     // 3. ATTACH EVENT LISTENERS
@@ -164,14 +168,24 @@
     const caddieSelector = document.getElementById('caddie-selector');
 
     coachSelector.addEventListener('change', () => {
-        checkStaffAvailability('coach-selector', 'coach-availability');
+        checkStaffAvailability('coach-selector', 'coach-availability', 'coach-text');
+        getPrice()
     });
     caddieSelector.addEventListener('change', () => {
-        checkStaffAvailability('caddie-selector', 'caddie-availability');
+        checkStaffAvailability('caddie-selector', 'caddie-availability', 'caddie-text');
+        getPrice()
     });
 
     // 4. RUN ON PAGE LOAD
-    checkStaffAvailability('coach-selector', 'coach-availability');
-    checkStaffAvailability('caddie-selector', 'caddie-availability');
+    checkStaffAvailability('coach-selector', 'coach-availability', 'coach-text');
+    checkStaffAvailability('caddie-selector', 'caddie-availability', 'caddie-text');
+
+    function getPrice() {
+        const totalText = document.getElementById('total-price');
+        coachPrice = checkStaffAvailability('coach-selector', 'coach-availability', 'coach-text');
+        caddiePrice = checkStaffAvailability('caddie-selector', 'caddie-availability', 'caddie-text');
+        total = caddiePrice + coachPrice + 5000;
+        totalText.textContent = `₱${total}`;
+    }
 </script>
 {% endblock %}
