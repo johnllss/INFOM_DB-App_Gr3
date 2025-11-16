@@ -30,13 +30,13 @@
                 <tbody>
                     <tr>
                         <td>Longest Driving Range:</td>
-                        <td><!-- {{ yards }} --> 6677 yards</td>
-                        <td><!-- {{ date }}--> 09-07-25</td>
+                        <td>{{ longest_driving_range }} yards</td>
+                        <td>{{ date_of_longest_DR }}</td>
                     </tr>
                     <tr>
                         <td>Highest Fairway Score:</td>
-                        <td><!-- {{ score }} --> 67</td>
-                        <td><!-- {{ date }}--> 09-07-25</td>
+                        <td>{{ best_score }}</td>
+                        <td>{{ date_of_best_FS }}</td>
                     </tr>
                     <tr>
                         <td>Months Subscribed:</td>
@@ -61,21 +61,19 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td>9 Holes</td>
-                        <td><!-- {{ score }} --> 67</td>
-                        <td><!-- {{ date }}--> 09-07-25</td>
-                    </tr>
-                    <tr>
-                        <td>9 Holes</td>
-                        <td><!-- {{ score }} --> 67</td>
-                        <td><!-- {{ date }}--> 09-07-25</td>
-                    </tr>
-                    <tr>
-                        <td>9 Holes</td>
-                        <td><!-- {{ months }} --> 6677 </td>
-                        <td><!-- {{ date }}--> 09-07-25</td>
-                    </tr>
+                    {% if fairway_sessions %}
+                        {% for session in fairway_sessions %}
+                        <tr>
+                            <td>{{ session['holes'] }}</td>
+                            <td>{{ session['score'] }}</td>
+                            <td>{{ session['date_played'] }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="3" class="text-center">No fairway sessions recorded yet.</td>
+                        </tr>
+                    {% endif %}
                 </tbody>
             </table>
         </div>
@@ -94,21 +92,19 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td>67 Sets</td>
-                        <td><!-- {{ score }} --> 67 yards</td>
-                        <td><!-- {{ date }}--> 09-07-25</td>
-                    </tr>
-                    <tr>
-                        <td>67 Sets</td>
-                        <td><!-- {{ score }} --> 67 yards</td>
-                        <td><!-- {{ date }}--> 09-07-25</td>
-                    </tr>
-                    <tr>
-                        <td>67 Sets</td>
-                        <td><!-- {{ months }} --> 6677 yards</td>
-                        <td><!-- {{ date }}--> 09-07-25</td>
-                    </tr>
+                    {% if driving_range_sessions %}
+                        {% for session in driving_range_sessions %}
+                        <tr>
+                            <td>{{ session['buckets'] }}</td>
+                            <td>{{ session['range'] }}</td>
+                            <td>{{ session['date_played'] }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="3" class="text-center">No driving range sessions recorded yet.</td>
+                        </tr>
+                    {% endif %}
                 </tbody>
             </table>
         </div>

@@ -15,43 +15,75 @@
     
         
     <div class="row">
-        <h1 class="text-left display-3 fw-bold mt-4 mb-5">
-            My Cart
-        </h1>
+        <h1 class="fw-bold mb-4"><em>My</em> <strong>Cart</strong></h1>
+        <div class="col-md-8">
+        <table class="table align-middle">
+            <thead>
+            <tr>
+                <th>Product Name</th>
+                <th class="text-center">Quantity</th>
+                <th class="text-center">Subtotal</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for item in cart_items %}
+            <tr>
+                <td>{{ item.name }}</td>
 
-    </div>
-    <form action="/cart" method="post">
+                <!-- Quantity Controls -->
+                <td class="text-center">
+                <div class="d-inline-flex align-items-center">
+                    <form action="{{ url_for('update_cart') }}" method="POST" class="d-inline">
+                    <input type="hidden" name="item_id" value="{{ item.id }}">
+                    <input type="hidden" name="action" value="increase">
+                    <button type="submit" class="btn btn-sm btn-success rounded-circle me-2">+</button>
+                    </form>
 
-        <div class="col-lg-5 col-md-12">
-                <div class="border rounded p-4">
-                    <h3 class="mb-4">Order Summary</h3>
+                    <span>{{ item.quantity }}</span>
 
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>Round</span>
-                        <strong>P67</strong>
-                    </div>
-
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>Coach</span>
-                        <strong>P67</strong>
-                    </div>
-
-                    <div class="d-flex justify-content-between mb-3">
-                        <span>Caddie</span>
-                        <strong>P67</strong>
-                    </div>
-
-                    <hr>
-
-                    <div class="d-flex justify-content-between h4 fw-bold my-3">
-                        <span>Total</span>
-                        <span>P67</span>
-                    </div>
-                    
-                    <button class="btn btn-green w-100" type="submit">Checkout Now</button>
+                    <form action="{{ url_for('update_cart') }}" method="POST" class="d-inline ms-2">
+                    <input type="hidden" name="item_id" value="{{ item.id }}">
+                    <input type="hidden" name="action" value="decrease">
+                    <button type="submit" class="btn btn-sm btn-success rounded-circle">−</button>
+                    </form>
                 </div>
+                </td>
+
+                <!-- Subtotal -->
+                <td class="text-center">₱{{ "%.2f"|format(item.price * item.quantity) }}</td>
+
+                <!-- Delete -->
+                <td class="text-center">
+                <form action="{{ url_for('remove_from_cart') }}" method="POST">
+                    <input type="hidden" name="item_id" value="{{ item.id }}">
+                    <button type="submit" class="btn btn-link text-danger fs-5 p-0">
+                    <i class="bi bi-trash"></i>
+                    </button>
+                </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" class="text-center">Your cart is empty.</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        <div class="col-md-4">
+            <div class="card p-3 shadow-sm">
+                <h6 class="fw-semibold">Order Summary</h6>
+                <hr>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="fw-bold fs-5">Total</span>
+                <span class="fw-bold fs-5">₱{{ "%.2f"|format(total) }}</span> 
+                </div>
+                <a href="/checkout" class="btn btn-success w-100 mt-2">Checkout Now</a>
             </div>
-    </form>
+        </div>
+    </div>
+
     
 
 </div>

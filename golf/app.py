@@ -226,11 +226,70 @@ def shop():
 
 
 
+@app.route("/api/add_to_cart", methods=["POST"])
+@login_required
+def add_to_cart():
+    
+    data = request.get_json()
+    if not data or "id" not in data:
+        return {"status": "error", "message": "Invalid request"}, 400
+
+    item_id = data["id"]
+
+    cursor = mysql.connection.cursor()
+    cursor.execute("SELECT item_id, name, price FROM item WHERE item_id = %s", (item_id,))
+    item = cursor.fetchone()
+
+    if not item:
+        cursor.close()
+        return {"status": "error", "message": "Item not found"}, 404
+
+    cursor.execute("SELECT cart_id FROM cart WHERE user_id = %s", (session["user_id"],))
+    cart = cursor.fetchone()
+
+    if not cart:
+        cursor.close()
+        return {"status": "error", "message": "Cart not found"}, 404
+
+    cart_id = cart["cart_id"]
+
+    cursor.execute("UPDATE item SET cart_id = %s WHERE item_id = %s", (cart_id, item_id))
+    mysql.connection.commit()
+
+    cursor.close()
+    return{"status": "success"}
+
+
+
 # Cart Checkout
 @app.route("/cart", methods=["GET", "POST"])
 @login_required
 def cart():
-    return render_template("cart.html")
+        
+    cursor = mysql.connection.cursor()
+
+    cursor.execute("SELECT cart_id FROM cart WHERE user_id = %s", (session["user_id"],))
+    cart = cursor.fetchone()
+
+    if cart:
+        cart_id = cart['cart_id']
+        cursor.execute("SELECT * FROM item WHERE cart_id = %s", (cart_id,))
+        cart_items = cursor.fetchall()
+    else:
+        cart_items = []
+
+    cursor.close()
+
+    # Calculate total
+    total = 67
+
+    return render_template("cart.html", cart_items=cart_items, total=total)
+
+@app.route("/booking", methods=["GET", "POST"])
+@login_required
+def booking():
+    return render_template("booking.html")
+
 
 @app.route("/booking/fairway", methods=["GET", "POST"])
 @login_required
@@ -348,31 +407,76 @@ def account():
     tier = user['membership_tier']
     loyalty_points = user['loyalty_points']
     
-    # GAME STATISTICS INFO (get best game out of all the sessions)
-    # TODO: extract from DB the Longest Driving Range and the Date of when it 
-    cur.execute("SELECT longest_range, score_fairway FROM session_user su JOIN golf_session gs ON su.session_id = gs.session_id JOIN user u ON gs.user_id = u.user_id WHERE user_id = %s", (session['user_id'],))
+# GAME STATISTICS INFO (get best game out of all the sessions)
+    # ROW 1
+    cur.execute("""
+                SELECT su.longest_range as longest_driving_range, DATE_FORMAT(gs.session_schedule, '%%Y-%%m-%%d') as date_achieved
+                FROM session_user su JOIN golf_session gs ON su.session_id = gs.session_id
+                WHERE su.user_id = %s AND su.longest_range IS NOT NULL
+                ORDER BY su.longest_range DESC
+                LIMIT 1
+                """, (session['user_id'],))
+    extracted_longestDR_data = cur.fetchone()
 
-    # TODO: extract from DB the Highest Fairway Score and the Date of when it happened
+        # default values as fallback for users with no sessions yet
+    user_longest_driving_range = extracted_longestDR_data('longest_driving_range') if extracted_longestDR_data else 0
+    date_of_longest_DR = extracted_longestDR_data('date_achieved') if extracted_longestDR_data else 'N/A'
 
-    # Row 3
-    months_subscribed = user['months_subscribed']
-    membership_end = user['membership_end']
+    # ROW 2
+    cur.execute("""
+                SELECT su.score_fairway as best_score, DATE_FORMAT(gs.session_schedule, '%%Y-%%m-%%d) as date_achieved
+                FROM session_user su JOIN golf_session gs ON su.session_id = gs.session_id
+                WHERE su.user_id = %s AND su.score_fairway IS NOT NULL
+                ORDER BY su.score_fairway ASC
+                LIMIT 1
+                """, (session['user_id'],))
+    extracted_fairway_date = cur.fetchone()
 
-    # FAIRWAY INFO (Limit 4 rows for display)
-    # TODO: extract from DB the Hole number, the Score, and the Date of when it happened
-    # TODO: extract from DB the Hole number, the Score, and the Date of when it happened
-    # TODO: extract from DB the Hole number, the Score, and the Date of when it happened
-    # TODO: extract from DB the Hole number, the Score, and the Date of when it happened
+        # default values as fallback for users with no sessions yet
+    user_best_fairway_score = extracted_fairway_date('best_score') if extracted_fairway_date else 0
+    date_of_best_FS = extracted_fairway_date('best_score') if extracted_fairway_date else 0
 
-    # DRIVING RANGE INFO (Limit 4 rows for display)
-    # TODO: extract from DB the Buckets number, the Range, and the Date of when it happened
-    # TODO: extract from DB the Buckets number, the Range, and the Date of when it happened
-    # TODO: extract from DB the Buckets number, the Range, and the Date of when it happened
-    # TODO: extract from DB the Buckets number, the Range, and the Date of when it happened
+    # ROW 3
+    cur.execute("""
+                SELECT TIMESTAMPDIFF(MONTH, CURDATE(), membership_end) as months_remaining, membership_end
+                FROM user 
+                WHERE user_id = %s AND membership_end IS NOT NULL
+                """,
+                (session['user_id'],))
+    extracted_membership_data = cur.fetchone()
 
-    # note: fairway info and driving range info should display data from most recent 4 sessions down to least recent 4 sessions
+        # default values as fallback for users with no sessions yet
+    months_subscribed = extracted_membership_data['months_remaining'] if extracted_membership_data and extracted_membership_data['months_remaining'] > 0 else 0
+    membership_end_date = extracted_membership_data['membership_end'].strftime("%Y-%m-%d") if extracted_membership_data else "N/A"
+
+
+# FAIRWAY INFO (Limit 4 rows for display)
+# note: fairway info info should display data from most recent 4 sessions down to least recent 4 sessions
+    cur.execute("""
+                SELECT gs.holes as holes, su.score_fairway as score, DATE_FORMAT(gs.session_schedule, '%%Y-%%m-%%d') as date_played
+                FROM session_user su JOIN golf_session gs ON su.session_id = gs.session_id
+                WHERE user_id = %s AND gs.type = 'Fairway' AND su.score_fairway IS NOT NULL
+                ORDER BY gs.session_schedule DESC
+                LIMIT 4
+                """,
+                (session['user_id'],))
+    extracted_fairway_hole_data = cur.fetchall()
+
+# DRIVING RANGE INFO (Limit 4 rows for display)
+# note: driving range info should display data from most recent 4 sessions down to least recent 4 sessions
+    cur.execute("""
+                SELECT su.buckets as buckets, su.longest_range as range, DATE_FORMAT(gs.session_schedule, '%%Y-%%m-%%d') as date_played
+                FROM session_user su JOIN golf_session gs ON su.session_id = gs.session_id
+                WHERE user_id = %s AND gs.type = 'Driving Range' AND su.longest_range IS NOT NULL
+                ORDER BY gs.session_schedule DESC
+                LIMIT 4
+                """,
+                (session['user_id']))
+    extracted_driving_range_bucket_date = cur.fetchall()
+
     cur.close()
-    return render_template("account.html", first_name=first_name, last_name=last_name, tier=tier, loyalty_points=loyalty_points, months_subscribed=months_subscribed, membership_end=membership_end)
+    return render_template("account.html", 
+                           first_name=first_name, last_name=last_name, tier=tier, loyalty_points=loyalty_points, longest_driving_range=user_longest_driving_range, date_of_longest_DR=date_of_longest_DR, best_score=user_best_fairway_score, date_of_best_FS=date_of_best_FS, months_subscribed=months_subscribed, membership_end=membership_end_date, fairway_sessions=extracted_fairway_hole_data, driving_range_sessions=extracted_driving_range_bucket_date)
 
 @app.route("/history")
 @login_required
@@ -620,22 +724,52 @@ def process_membership_payment(cur, user_id):
     if not tier or not months:
         return 
     
-    cur.execute("SELECT membership_end FROM user WHERE user_id = %s", (user_id,))
+    cur.execute("""
+                SELECT membership_start, membership_end 
+                FROM user 
+                WHERE user_id = %s
+                """, 
+                (user_id,))
     user = cur.fetchone()
 
-    # get user's current membership end date, else None
-    current_user_membership_end = user["membership_end"] if user and user["membership_end"] else None
+    date_today = datetime().now().date()
+    new_membership_start = None
+    new_membership_end = None
 
-    #calculate user's new membership_end date
-    if current_user_membership_end and current_user_membership_end > datetime.now().date():
-        # extend from current membership_end
-        new_membership_end = current_user_membership_end + timedelta(days = 30 * months)
+    # FIRST-TIME SUBSCRIBER
+    if not user['membership_start']:
+        new_membership_start = date_today
+        new_membership_end = date_today + timedelta(days=30 * months)
+
+        cur.execute("""
+                    UPDATE user
+                    SET membership_tier = %s, membership_start = %s, membership_end = %s
+                    WHERE user_id = %s
+                    """, 
+                    (tier, new_membership_start, new_membership_end, user_id))
+
+    # USER RENEWING WHILE THEY HAVE ACTIVE MEMBERSHIP
+    elif user['membership_end'] and user['membership_end'] >= date_today:
+        new_membership_end = date_today + timedelta(days=30 * months)
+
+        cur.execute("""
+                    UPDATE user
+                    SET membership_tier = %s, membership_end = %s
+                    WHERE user_id = %s
+                    """,
+                    (tier, new_membership_end, user_id))
+
+    # RESUBSCRIBERS
     else:
-        # start from today
-        new_membership_end = current_user_membership_end + timedelta(days=30 * months) 
+        new_membership_start = date_today;
+        new_membership_end = date_today + timedelta(days= 30 * months)
 
-    # finally, update user's new tier and membership_end in the User table
-    cur.execute("UPDATE user SET tier = %s, membership_end = %s WHERE user_id = %s", (tier, new_membership_end, user_id))
+    cur.execute("""
+                UPDATE user
+                SET membership_tier = %s, membership_start = %s, membership_end = %s
+                WHERE user_id = %s
+                """,
+                (tier, new_membership_start, new_membership_end, user_id))
 
 # CREATING OF RECORD IN payment TABLE
     # extract payment method 
@@ -643,7 +777,11 @@ def process_membership_payment(cur, user_id):
     payment_method_enum, message = validate_payment_method(payment_method)
     
     # now, create the payment record
-    cur.execute("INSERT INTO payment (total_price, date_paid, payment_method, status, discount_applied, user_id, cart_id, session_user_id) VALUES (%s, NOW(), %s, 'Paid', 0.00, %s, NULL, NULL)", (total_price, payment_method_enum, user_id))
+    cur.execute("""
+                INSERT INTO payment (total_price, date_paid, payment_method, status, discount_applied, user_id, cart_id, session_user_id) 
+                VALUES (%s, NOW(), %s, 'Paid', 0.00, %s, NULL, NULL)""",
+                (total_price, payment_method_enum, user_id))
+    # TODO cart_id and session_user_id might need to be extracted
 
 # TODO: Jerry
 def process_cart_payment(cur, user_id, checkout_context):
@@ -665,7 +803,11 @@ def update_loyalty_points(cur, user_id, checkout_context):
     net_loyalty_points = points_earned - loyalty_points_used # net change in loyalty points
 
     # actual updating
-    cur.execute("UPDATE user SET loyalty_points = loyalty_points + %s WHERE user_id = %s", (net_loyalty_points, user_id))
+    cur.execute("""
+                UPDATE user 
+                SET loyalty_points = loyalty_points + %s 
+                WHERE user_id = %s""", 
+                (net_loyalty_points, user_id))
 
     return
 

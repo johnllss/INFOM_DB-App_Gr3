@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 
 {% block title %}
-    Fairway Booking
+    Range Booking
 {% endblock %}
 
 {% block main %}
@@ -71,7 +71,7 @@
                                 <select class="form-select" name="booking-coach" id="coach-selector">
                                     <option value="0">No Coach</option>
                                     {% for co in coach %}
-                                        <option value="{{ co.staff_id }}" data-status="{{ co.status }}">
+                                        <option value="{{ co.staff_id }}" data-status="{{ co.status }}" fee="{{ co.service_fee }}">
                                             {{ co.name }}
                                         </option>
                                     {% endfor %}
@@ -93,25 +93,25 @@
                     <h3 class="mb-4">Order Summary</h3>
 
                     <div class="d-flex justify-content-between mb-2">
-                        <span>Round</span>
-                        <strong>P67</strong>
+                        <span>Range</span>
+                        <strong>₱1000</strong>
+                    </div>
+
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Buckets</span>
+                        <strong id="buckets-price">₱300</strong>
                     </div>
 
                     <div class="d-flex justify-content-between mb-2">
                         <span>Coach</span>
-                        <strong>P67</strong>
-                    </div>
-
-                    <div class="d-flex justify-content-between mb-3">
-                        <span>Caddie</span>
-                        <strong>P67</strong>
+                        <strong id="coach-price">₱0</strong>
                     </div>
 
                     <hr>
 
                     <div class="d-flex justify-content-between h4 fw-bold my-3">
                         <span>Total</span>
-                        <span>P67</span>
+                        <span id ="total-price">₱1300</span>
                     </div>
                     
                     <button class="btn btn-green w-100" type="submit">Checkout Now</button>
@@ -143,22 +143,25 @@
     // Attach listeners
     increaseBtn.addEventListener('click', function() {
         updateQuantity(1); // Increase by 1
+        getPrice()
     });
 
     decreaseBtn.addEventListener('click', function() {
         updateQuantity(-1); // Decrease by 1
+        getPrice()
     });
 
-    function checkStaffAvailability(selectorId, availabilityId) {
-        
+    function checkStaff(selectorId, availabilityId) {
+        const coachText = document.getElementById("coach-price");
         const selector = document.getElementById(selectorId);
         const availabilityText = document.getElementById(availabilityId);
         const selectedOption = selector.options[selector.selectedIndex];
         const selectedStaffId = selectedOption.value;
+        const selectedStaffPrice = parseFloat(selectedOption.getAttribute('fee'));
 
         if (selectedStaffId === "0") {
             availabilityText.textContent = ""; 
-            return;
+            return 0;
         }
 
         // read the string
@@ -172,6 +175,9 @@
             availabilityText.textContent = 'Occupied'; 
             availabilityText.className = 'h5 fw-bold text-danger mb-0';
         }
+
+        coachText.textContent = `₱${selectedStaffPrice}`;
+        return selectedStaffPrice;
     }
 
     // 3. ATTACH EVENT LISTENERS
@@ -179,14 +185,22 @@
     const caddieSelector = document.getElementById('caddie-selector');
 
     coachSelector.addEventListener('change', () => {
-        checkStaffAvailability('coach-selector', 'coach-availability');
-    });
-    caddieSelector.addEventListener('change', () => {
-        checkStaffAvailability('caddie-selector', 'caddie-availability');
+        checkStaff('coach-selector', 'coach-availability');
+        getPrice()
     });
 
     // 4. RUN ON PAGE LOAD
-    checkStaffAvailability('coach-selector', 'coach-availability');
-    checkStaffAvailability('caddie-selector', 'caddie-availability');
+    checkStaff('coach-selector', 'coach-availability');
+
+    function getPrice() {
+        const totalText = document.getElementById('total-price');
+        const bucketsText = document.getElementById("buckets-price");
+        const currentQuantity = parseInt(document.getElementById('hiddenValue').value);
+        coachPrice = checkStaff('coach-selector', 'coach-availability');
+        bucketsPrice = currentQuantity * 300;
+        total = bucketsPrice + coachPrice + 1000;
+        bucketsText.textContent = `₱${bucketsPrice}`;
+        totalText.textContent = `₱${total}`;
+    }
 </script>
 {% endblock %}
