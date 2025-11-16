@@ -5,110 +5,155 @@
 {% endblock %}
 
 {% block main %}
-<div class="container mt-5">
-    <div>
-        <h1><strong>{{ first_name }} {{ last_name }}</strong></h1>
-    </div>
 
-    <div>
-        <h2>{{ tier }} Member</h2>
-        <p>Loyalty Points: {{ loyalty_points }}</p>
-    </div>
+<style>
+    /* Make tier + loyalty same height as name */
+    .member-box {
+        font-size: 2rem; /* similar height to display-4 text */
+        line-height: 1.2;
+    }
 
-    <div>
-        <h3>Game Statistics</h3>
+    /* Reduce table width */
+    .table-narrow {
+        max-width: 85%;
+    }
 
-        <div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Record</th>
-                        <th>Metric</th>
-                        <th>Date</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>Longest Driving Range:</td>
-                        <td>{{ longest_driving_range }} yards</td>
-                        <td>{{ date_of_longest_DR }}</td>
-                    </tr>
-                    <tr>
-                        <td>Highest Fairway Score:</td>
-                        <td>{{ best_score }}</td>
-                        <td>{{ date_of_best_FS }}</td>
-                    </tr>
-                    <tr>
-                        <td>Months Subscribed:</td>
-                        <td>{{ months_subscribed }} months</td>
-                        <td>{{ membership_end }}</td>
-                    </tr>
-                </tbody>
-            </table>
+    .game-stats-table {
+        max-width: 650px;
+        margin-left: 0;
+    }
+</style>
+
+<div class="container py-5">
+
+    <!-- HEADER -->
+    <div class="row align-items-center pb-4 mb-5">
+
+        <!-- LEFT: Name + Membership Info (side by side) -->
+        <div class="col-md-12 d-flex flex-wrap align-items-center gap-5">
+
+            <h1 class="display-4 fw-bold m-0">
+                {{ first_name }} {{ last_name }}
+            </h1>
+
+            <!-- Membership + Loyalty -->
+            <div class="member-box d-flex flex-column">
+                <span class="fw-bold bg-success text-light p-2">{{ tier }} Member</span>
+                <span class="fw-semibold">Loyalty Points: {{ loyalty_points }}</span>
+            </div>
+
         </div>
     </div>
 
-    <div>
-        <h4>Fairway</h4>
+    <!-- GAME STATISTICS -->
+    <h2 class="mb-4 fw-bold fst-italic">Game Statistics</h2>
 
-        <div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Holes</th>
-                        <th>Score</th>
-                        <th>Date</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% if fairway_sessions %}
-                        {% for session in fairway_sessions %}
-                        <tr>
-                            <td>{{ session['holes'] }}</td>
-                            <td>{{ session['score'] }}</td>
-                            <td>{{ session['date_played'] }}</td>
-                        </tr>
-                        {% endfor %}
-                    {% else %}
-                        <tr>
-                            <td colspan="3" class="text-center">No fairway sessions recorded yet.</td>
-                        </tr>
-                    {% endif %}
-                </tbody>
-            </table>
-        </div>
+    <div class="table-responsive mb-5 game-stats-table">
+        <table class="table align-middle table-narrow mx-auto">
+            <thead>
+                <tr>
+                    <th class="fw-semibold">Record</th>
+                    <th class="fw-semibold">Metric</th>
+                    <th class="fw-semibold">Date</th>
+                </tr>
+            </thead>
+            <tbody>
+
+                <tr>
+                    <td>Longest Driving Range</td>
+                    <td>{{ longest_driving_range }} yards</td>
+                    <td>{{ date_of_longest_DR }}</td>
+                </tr>
+
+                <tr>
+                    <td>Highest Fairway Score</td>
+                    <td>{{ best_score }}</td>
+                    <td>{{ date_of_best_FS }}</td>
+                </tr>
+
+                <tr>
+                    <td>Months Subscribed</td>
+                    <td>{{ months_subscribed }} months</td>
+                    <td>{{ membership_end }}</td>
+                </tr>
+
+            </tbody>
+        </table>
     </div>
 
-    <div>
-        <h4>Driving Range</h4>
+    <!-- TWO COLUMNS -->
+    <div class="row g-5 justify-content-between">
 
-        <div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Buckets</th>
-                        <th>Range</th>
-                        <th>Date</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% if driving_range_sessions %}
-                        {% for session in driving_range_sessions %}
+        <!-- FAIRWAY -->
+        <div class="col-md-5">
+            <h3 class="fw-bold">Fairway</h3>
+
+            <div class="table-responsive">
+                <table class="table align-middle table-narrow mx-auto">
+                    <thead>
                         <tr>
-                            <td>{{ session['buckets'] }}</td>
-                            <td>{{ session['range'] }}</td>
-                            <td>{{ session['date_played'] }}</td>
+                            <th class="fw-semibold">Holes</th>
+                            <th class="fw-semibold">Score</th>
+                            <th class="fw-semibold">Date</th>
                         </tr>
-                        {% endfor %}
-                    {% else %}
-                        <tr>
-                            <td colspan="3" class="text-center">No driving range sessions recorded yet.</td>
-                        </tr>
-                    {% endif %}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        {% if fairway_sessions %}
+                            {% for s in fairway_sessions %}
+                            <tr>
+                                <td>{{ s.holes }}</td>
+                                <td>{{ s.score }}</td>
+                                <td>{{ s.date_played }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="3" class="text-center text-muted py-4">
+                                    No fairway sessions recorded yet.
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
         </div>
+
+        <!-- DRIVING RANGE -->
+        <div class="col-md-5">
+            <h3 class="fw-bold">Driving Range</h3>
+
+            <div class="table-responsive">
+                <table class="table align-middle table-narrow mx-auto">
+                    <thead>
+                        <tr>
+                            <th class="fw-semibold">Buckets</th>
+                            <th class="fw-semibold">Range</th>
+                            <th class="fw-semibold">Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if driving_range_sessions %}
+                            {% for s in driving_range_sessions %}
+                            <tr>
+                                <td>{{ s.buckets }}</td>
+                                <td>{{ s.range }}</td>
+                                <td>{{ s.date_played }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="3" class="text-center text-muted py-4">
+                                    No driving range sessions recorded yet.
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
     </div>
+
 </div>
 
 {% endblock %}
