@@ -416,12 +416,12 @@ def account():
     extracted_longestDR_data = cur.fetchone()
 
         # default values as fallback for users with no sessions yet
-    user_longest_driving_range = extracted_longestDR_data('longest_driving_range') if extracted_longestDR_data else 0
-    date_of_longest_DR = extracted_longestDR_data('date_achieved') if extracted_longestDR_data else 'N/A'
+    user_longest_driving_range = extracted_longestDR_data['longest_driving_range'] if extracted_longestDR_data else 0
+    date_of_longest_DR = extracted_longestDR_data['date_achieved'] if extracted_longestDR_data else 'N/A'
 
     # ROW 2
     cur.execute("""
-                SELECT su.score_fairway as best_score, DATE_FORMAT(gs.session_schedule, '%%Y-%%m-%%d) as date_achieved
+                SELECT su.score_fairway as best_score, DATE_FORMAT(gs.session_schedule, '%%Y-%%m-%%d') as date_achieved
                 FROM session_user su JOIN golf_session gs ON su.session_id = gs.session_id
                 WHERE su.user_id = %s AND su.score_fairway IS NOT NULL
                 ORDER BY su.score_fairway ASC
@@ -430,8 +430,8 @@ def account():
     extracted_fairway_date = cur.fetchone()
 
         # default values as fallback for users with no sessions yet
-    user_best_fairway_score = extracted_fairway_date('best_score') if extracted_fairway_date else 0
-    date_of_best_FS = extracted_fairway_date('best_score') if extracted_fairway_date else 0
+    user_best_fairway_score = extracted_fairway_date['best_score'] if extracted_fairway_date else 0
+    date_of_best_FS = extracted_fairway_date['date_achieved'] if extracted_fairway_date else 'N/A'
 
     # ROW 3
     cur.execute("""
@@ -462,13 +462,13 @@ def account():
 # DRIVING RANGE INFO (Limit 4 rows for display)
 # note: driving range info should display data from most recent 4 sessions down to least recent 4 sessions
     cur.execute("""
-                SELECT su.buckets as buckets, su.longest_range as range, DATE_FORMAT(gs.session_schedule, '%%Y-%%m-%%d') as date_played
+                SELECT su.buckets as buckets, su.longest_range as longest_range, DATE_FORMAT(gs.session_schedule, '%%Y-%%m-%%d') as date_played
                 FROM session_user su JOIN golf_session gs ON su.session_id = gs.session_id
                 WHERE user_id = %s AND gs.type = 'Driving Range' AND su.longest_range IS NOT NULL
                 ORDER BY gs.session_schedule DESC
                 LIMIT 4
                 """,
-                (session['user_id']))
+                (session['user_id'],))
     extracted_driving_range_bucket_date = cur.fetchall()
 
     cur.close()
