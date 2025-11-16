@@ -16,6 +16,7 @@ CREATE TABLE user (
     last_name           VARCHAR(100) NOT NULL,
     email               VARCHAR(255) NOT NULL UNIQUE,
     hash                VARCHAR(255) NOT NULL,
+    is_admin            TINYINT(1) NOT NULL,
     contact             VARCHAR(20),
     membership_tier     ENUM('Unsubscribed','Bronze','Silver','Gold','Platinum','Diamond') DEFAULT 'Unsubscribed' NOT NULL,
     membership_start    DATE,
@@ -57,13 +58,14 @@ CREATE TABLE golf_session (
 CREATE TABLE session_user (
     session_user_id INT PRIMARY KEY AUTO_INCREMENT,
     user_id         INT,
-    session_id      INT NOT NULL,
+    session_id      INT NOT NULL, 
     coach_id        INT NULL,
     caddie_id       INT NULL,
     score_fairway   INT DEFAULT NULL,
     longest_range   INT DEFAULT NULL,
     buckets         INT,
     loyalty_earned  INT DEFAULT 0,
+    status          ENUM('Cancelled', 'Pending', 'Confirmed'),
     UNIQUE (session_id, user_id),
     CONSTRAINT fk_user FOREIGN KEY (user_id)
         REFERENCES user(user_id)
