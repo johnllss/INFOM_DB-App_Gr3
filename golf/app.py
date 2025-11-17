@@ -196,7 +196,7 @@ def add_subscription_to_cart():
 @app.route("/shop", methods=["GET", "POST"])
 @login_required
 def shop():
-    cursor = mysql.connection.cursor()
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
 
     # Query the database
     item_type = request.args.get('type') 
@@ -218,8 +218,18 @@ def shop():
             
     cursor.execute(query, param) 
     items = cursor.fetchall() 
+
+    cursor.execute("SELECT cart_id FROM cart WHERE user_id = %s", (session["user_id"],))
+    cart = cursor.fetchone()
+
+    cursor.execute("SELECT COUNT(item_id) AS numm FROM item WHERE cart_id = %s", (cart["cart_id"],))
+    num = cursor.fetchone()
+
+    cartNum = num["numm"]
+    
+
     cursor.close() # Example count 
-    return render_template("shop.html", items=items, selected_type=item_type, selected_category=category)
+    return render_template("shop.html", items=items, selected_type=item_type, selected_category=category, cartNum=cartNum)
 
 
 
@@ -251,6 +261,14 @@ def add_to_cart():
     cart_id = cart["cart_id"]
 
     cursor.execute("UPDATE item SET cart_id = %s WHERE item_id = %s", (cart_id, item_id))
+    mysql.connection.commit()
+
+    cursor.execute("SELECT price FROM item WHERE cart_id = %s", (cart_id,))
+    items = cursor.fetchall()
+
+    items_total = sum(item["price"] for i in items)
+
+    cursor.execute("UPDATE cart SET total_price = %s WHERE cart_id = %s", (items_total, cart_id))
     mysql.connection.commit()
 
     cursor.close()
