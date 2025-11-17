@@ -1,12 +1,56 @@
 {% extends "layout.html" %}
 
 {% block title %}
-    Purchased
+    Reports
 {% endblock %}
 
 {% block main %}
-<div class="container text-center align-items-center">
-    <h1 class="my-5"><strong>Reports</strong></h1>
-    <a href="/" class="homepage-welcome text-center fs-2"><strong>Back to Home</strong></a>
-</div>
+    <div class="container">
+        <h1 class="my-5"><strong>Admin Reports</strong></h1>
+
+        <h2 class="mt-5">Yearly Staff Performance</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Staff Name</th>
+                    <th>Role</th>
+                    <th>Year</th>
+                    <th>Total Sessions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in yearly_staff_report %}
+                <tr>
+                    <td>{{ row.name }}</td>
+                    <td>{{ row.role }}</td>
+                    <td>{{ row.session_year }}</td>
+                    <td>{{ row.total_sessions }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <h2 class="mt-5">Quarterly Staff Performance</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Staff Name</th>
+                    <th>Role</th>
+                    <th>Quarter</th>
+                    <th>Total Sessions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in quarterly_staff_report %}
+                <tr>
+                    <td>{{ row.name }}</td>
+                    <td>{{ row.role }}</td>
+                    <td>{{ row.session_quarter }}</td>
+                    <td>{{ row.total_sessions }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+    </div>
 {% endblock %}

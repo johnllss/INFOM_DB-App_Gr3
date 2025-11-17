@@ -81,8 +81,8 @@ def register():
 
         # Payment Creation
         cur.execute("""
-            INSERT INTO payment (total_price, date_paid, payment_method, status, discount_applied, user_id, cart_id)
-            VALUES (0.00, NOW(), 'Cash', 'Pending', 0.00, %s, %s)
+            INSERT INTO payment (total_price, payment_method, status, discount_applied, user_id, cart_id)
+            VALUES (0.00, 'Cash', 'Pending', 0.00, %s, %s)
         """, (user_id, cart_id))
         mysql.connection.commit()
         cur.close()
@@ -504,7 +504,7 @@ def history():
 @app.route("/reports")
 @login_required
 @admin_required
-def reports():
+def report():
     # Only admins can reach this point
     # TODO: Ronald, Sales Performance Report
 
