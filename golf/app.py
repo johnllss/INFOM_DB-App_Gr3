@@ -4,11 +4,10 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from flask_mysqldb import MySQL
 import MySQLdb.cursors
 import helpers
-from helpers import (
-    apology, login_required, admin_required, php,
-    load_checkout_context, validate_payment_method,
-    process_membership_payment, process_golf_session_payment,
-    process_cart_payment, update_loyalty_points, cleanup_checkout_session)
+from helpers import apology, login_required, admin_required, php
+
+import process
+import reports
 
 app = Flask(__name__)
 
@@ -45,19 +44,24 @@ def register():
         first_name = request.form.get("fname")
         last_name = request.form.get("lname")
         email = request.form.get("email")
+        contact = request.form.get("contact")
         password = request.form.get("password")
         confirmation = request.form.get("confirmation")
 
         if not first_name or not last_name:
             return apology("Input your first name and last name.", 400)
-        elif not email:
+        if not email:
             return apology("Input your email.", 400)
+        if not contact:
+            return apology("Input your contact number.", 400)
 
         cur = mysql.connection.cursor()
         cur.execute("SELECT * FROM user WHERE email = %s", (email,))
         if cur.rowcount == 1:
             return apology("Email already exists.", 400)
-        cur.close()
+        cur.execute("SELECT * FROM user WHERE contact = %s", (contact,))
+        if cur.rowcount == 1:
+            return apology("Contact number already exists.", 400)
         
         if not password or not confirmation:
             return apology("Input your password and its confirmation.", 400)
@@ -67,9 +71,8 @@ def register():
         hash = generate_password_hash(password)
 
         # User Creation
-        cur = mysql.connection.cursor()
-        cur.execute("INSERT INTO user (first_name, last_name, email, hash) VALUES (%s, %s, %s, %s)",
-            (first_name, last_name, email, hash))
+        cur.execute("INSERT INTO user (first_name, last_name, email, contact, hash) VALUES (%s, %s, %s, %s, %s)",
+            (first_name, last_name, email, contact, hash))
         user_id = cur.lastrowid
         
         # Cart Creation
@@ -78,8 +81,8 @@ def register():
 
         # Payment Creation
         cur.execute("""
-            INSERT INTO payment (total_price, date_paid, payment_method, status, discount_applied, user_id, cart_id)
-            VALUES (0.00, NOW(), 'Cash', 'Pending', 0.00, %s, %s)
+            INSERT INTO payment (total_price, payment_method, status, discount_applied, user_id, cart_id)
+            VALUES (0.00, 'Cash', 'Pending', 0.00, %s, %s)
         """, (user_id, cart_id))
         mysql.connection.commit()
         cur.close()
@@ -135,9 +138,26 @@ def homepage():
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cur.execute("SELECT first_name FROM user WHERE user_id = %s", (session["user_id"],))
     first_name = cur.fetchone()
+
+    cur.execute("""
+        SELECT 
+            gs.type, 
+            DATE_FORMAT(gs.session_schedule, '%%Y-%%m-%%d') AS session_date_formatted, 
+            TIME_FORMAT(gs.session_schedule, '%%h:%%i %%p') AS session_time_formatted
+        FROM 
+            golf_session gs
+        JOIN 
+            session_user su ON gs.session_id = su.session_id
+        WHERE 
+            su.user_id = %s AND su.status = 'Pending'
+        ORDER BY 
+            gs.session_schedule;
+    """, (session["user_id"],))
+    pending_sessions = cur.fetchall()
+
     cur.close()
 
-    return render_template("home.html", user=first_name)
+    return render_template("home.html", user=first_name, pending_sessions=pending_sessions)
 
 # Membership
 @app.route("/membership", methods=["GET", "POST"])
@@ -384,7 +404,6 @@ def cart():
 def booking():
     return render_template("booking.html")
 
-
 @app.route("/booking/fairway", methods=["GET", "POST"])
 @login_required
 def fairway():
@@ -397,52 +416,72 @@ def fairway():
     caddie = cur.fetchall()
 
     if request.method == "POST":
-        # Booking Handling (iyo toh ronald)
-        
-            # *session and session_user is already created after all error handling
-            # pahingi rin session_id variable pang-reference sa pagbook
-        
+        # Booking Handling
+        date = request.form.get("booking-date")
+        time = request.form.get("booking-time")
+        datetime = f"{date} {time}:00"
+        hole = request.form.get("booking-hole")
 
+        # Create golf_session entry
+        cur.execute("SELECT * FROM golf_session WHERE session_schedule = %s AND type = %s AND holes = %s", 
+                    (datetime, "Fairway", hole))
+        
+        if cur.rowcount == 0:
+            if hole == 'Full 18':
+                price = 5000
+            else:
+                price = 3000
+            cur.execute("INSERT INTO golf_session (type, session_schedule, holes, people_limit, status, session_price) VALUES (%s, %s, %s, %s, %s, %s)",
+                        ('Fairway', datetime, hole, 8, "Available", price))
+            session_id = cur.lastrowid
+        else:
+            golf_session = cur.fetchone()
+            if golf_session['status'] == 'Fully Booked':
+                cur.close()
+                return apology("Selected session is fully booked. Please choose another schedule.", 400)
+            session_id = golf_session['session_id']
 
-        # Staff Handling (assuming that the session that the user booked is available)
+        # Insert session_user entry
+        cur.execute("INSERT INTO session_user (user_id, session_id, status) VALUES (%s, %s, %s)",
+                    (session['user_id'], session_id, "Pending"))
+
+        # Check if session is now fully booked
+        cur.execute("SELECT COUNT(*) as count FROM session_user WHERE session_id = %s", (session_id,))
+        user_count = cur.fetchone()
+        if user_count['count'] >= 8:
+            cur.execute("UPDATE golf_session SET status = %s WHERE session_id = %s",
+                        ("Fully Booked", session_id))
+
+        # Staff Handling
         book_coach = request.form.get("booking-coach")
-
-        # If a user selected a coach
-        if book_coach != 0:
+        if book_coach != "0":
             cur.execute("SELECT status FROM staff WHERE staff_id = %s", (book_coach,))
             status_coach = cur.fetchone()
 
-            # If coach is occupied
-            if not status_coach and status_coach["status"] == 'Occupied':
-                return apology("Coach is not available for booking.")
+            if not status_coach or status_coach["status"] == 'Occupied':
+                cur.close()
+                return apology("Coach is not available for booking.", 400)
             
-            # If coach is available
-            cur.execute("""
-                INSERT INTO session_user_id (coach_id)
-                VALUES (%s)
-                WHERE user_id = %s AND session_id = %s
-            """, (book_coach, session["user_id"], session_id))
-            mysql.connection.commit()
+            cur.execute("""UPDATE session_user SET coach_id = %s
+                          WHERE user_id = %s AND session_id = %s""",
+                        (book_coach, session["user_id"], session_id))
 
         book_caddie = request.form.get("booking-caddie")
-
-        # If a user selected a caddie
-        if book_caddie != 0:
+        if book_caddie != "0":
             cur.execute("SELECT status FROM staff WHERE staff_id = %s", (book_caddie,))
             status_caddie = cur.fetchone()
 
-            # If caddie is occupied
-            if not status_caddie and status_caddie["status"] == 'Occupied':
-                return apology("Caddie is not available for booking.")
+            if not status_caddie or status_caddie["status"] == 'Occupied':
+                cur.close()
+                return apology("Caddie is not available for booking.", 400)
 
-            # If caddie is available
-            cur.execute("""
-                INSERT INTO session_user_id (caddie_id)
-                VALUES (%s)
-                WHERE user_id = %s AND session_id = %s
-            """, (book_coach, session["user_id"], session_id))
-            mysql.connection.commit()
+            cur.execute("""UPDATE session_user SET caddie_id = %s
+                          WHERE user_id = %s AND session_id = %s""",
+                        (book_caddie, session["user_id"], session_id))
+
+        mysql.connection.commit()
         cur.close()
+        return redirect("/checkout")
     else:
         cur.close()
         return render_template("fairway.html", coach=coach, caddie=caddie)
@@ -453,36 +492,58 @@ def range():
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
 
     cur.execute("SELECT * FROM staff WHERE role = 'Coach'")
-    coach = cur.fetchall()
+    coach = cur.fetchall()  
 
     if request.method == "POST":
-        # Booking Handling (iyo toh ronald)
+        # Booking Handling
+        date = request.form.get("booking-date")
+        time = request.form.get("booking-time")
+        datetime = f"{date} {time}:00"
+        bucket = request.form.get("buckets-value")
+
+        # Create golf_session entry
+        cur.execute("SELECT * FROM golf_session WHERE session_schedule = %s AND type = %s", 
+                    (datetime, "Range"))
         
-            # *session and session_user is already created after all error handling
-            # pahingi rin session_id variable pang-reference sa pagbook
+        if cur.rowcount == 0:
+            cur.execute("INSERT INTO golf_session (type, session_schedule, people_limit, status, session_price) VALUES (%s, %s, %s, %s, %s)",
+                        ('Driving Range', datetime, 25, "Available", 1000))
+            session_id = cur.lastrowid
+        else:
+            golf_session = cur.fetchone()
+            if golf_session['status'] == 'Fully Booked':
+                cur.close()
+                return apology("Selected session is fully booked. Please choose another schedule.", 400)
+            session_id = golf_session['session_id']
 
-        # Staff Handling (assuming that the session that the user booked is available)
+        # Insert session_user entry
+        cur.execute("INSERT INTO session_user (user_id, session_id, status, buckets) VALUES (%s, %s, %s, %s)",
+                    (session['user_id'], session_id, "Pending", bucket))
+
+        # Check if session is now fully booked
+        cur.execute("SELECT COUNT(*) as count FROM session_user WHERE session_id = %s", (session_id,))
+        user_count = cur.fetchone()
+        if user_count['count'] >= 25:
+            cur.execute("UPDATE golf_session SET status = %s WHERE session_id = %s",
+                        ("Fully Booked", session_id))
+
+        # Staff Handling
         book_coach = request.form.get("booking-coach")
-
-        # If a user selected a coach
-        if book_coach != 0:
+        if book_coach != "0":
             cur.execute("SELECT status FROM staff WHERE staff_id = %s", (book_coach,))
             status_coach = cur.fetchone()
 
-            # If coach is occupied
-            if not status_coach and status_coach["status"] == 'Occupied':
-                return apology("Coach is not available for booking.")
+            if not status_coach or status_coach["status"] == 'Occupied':
+                cur.close()
+                return apology("Coach is not available for booking.", 400)
             
-            # If coach is available
-            cur.execute("""
-                INSERT INTO session_user_id (coach_id)
-                VALUES (%s)
-                WHERE user_id = %s AND session_id = %s
-            """, (book_coach, session["user_id"], session_id))
-            mysql.connection.commit()
+            cur.execute("""UPDATE session_user SET coach_id = %s
+                          WHERE user_id = %s AND session_id = %s""",
+                        (book_coach, session["user_id"], session_id))
 
-        book_caddie = request.form.get("booking-caddie")
+        mysql.connection.commit()
         cur.close()
+        return redirect("/checkout")
     else:
         cur.close()
         return render_template("range.html", coach=coach)
@@ -585,9 +646,25 @@ def history():
 @app.route("/reports")
 @login_required
 @admin_required
-def reports():
+def report():
     # Only admins can reach this point
-    return render_template("reports.html")
+    # TODO: Ronald, Sales Performance Report
+
+    # TODO: Gab, Staff Performance Report
+    yearly_staff_report = reports.get_yearly_staff_report(mysql)
+    quarterly_staff_report = reports.get_quarterly_staff_report(mysql)
+    
+    # TODO: Jerry, Inventory Report
+
+    # TODO: JL, Customer Value Report
+
+    return render_template("reports.html", 
+                           # sales_report=sales_report,
+                           yearly_staff_report=yearly_staff_report, 
+                           quarterly_staff_report=quarterly_staff_report
+                           # inventory_report=inventory_report,
+                           # customer_report=customer_report
+                           )
 
 # Checkout (where all payments are settled)
 @app.route("/checkout", methods=["GET", "POST"])
@@ -597,13 +674,13 @@ def checkout():
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
 
     # Load all payment-related context
-    checkout_context = load_checkout_context(cur, user_id)
+    checkout_context = process.load_checkout_context(cur, user_id)
 
     if request.method == "POST":
         payment_method = request.form.get("method")
 
         # Validate and standardize payment method
-        payment_method_enum, message = validate_payment_method(payment_method)
+        payment_method_enum, message = process.validate_payment_method(payment_method)
         if not payment_method_enum:
             cur.close()
             return apology("Invalid payment method.", 400)
@@ -612,18 +689,18 @@ def checkout():
             # Process payments modularly
             
             if checkout_context["membership_fee"] != 0:
-                process_membership_payment(cur, user_id)
+                process.process_membership_payment(cur, user_id)
                 pass
 
             if checkout_context["cart_fee"] != 0:
-                process_cart_payment(cur, user_id, checkout_context)
+                process.process_cart_payment(cur, user_id, checkout_context)
                 pass
 
             if checkout_context["session_fee"] != 0:
-                process_golf_session_payment(cur, user_id, checkout_context)
+                process.process_golf_session_payment(cur, user_id, checkout_context)
                 pass
 
-            update_loyalty_points(cur, user_id, checkout_context)
+            process.update_loyalty_points(cur, user_id, checkout_context)
 
             mysql.connection.commit()
 
@@ -634,7 +711,7 @@ def checkout():
             cur.close()
 
         # STEP 5: Cleanup temporary session data
-        cleanup_checkout_session(session)
+        process.cleanup_checkout_session(session)
 
         return render_template("purchased.html", message=message)
 
@@ -643,7 +720,6 @@ def checkout():
         cur.close()
         # STEP 6: Render checkout summary
         return render_template("checkout.html", **checkout_context)
-
 
 @app.route("/logout")
 def logout():

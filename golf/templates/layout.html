@@ -42,10 +42,11 @@
                             <li class="nav-item"><a class="nav-link" href="/membership">Membership</a></li>
                             <li class="nav-item"><a class="nav-link" href="/shop">Shop</a></li>
                             <li class="nav-item"><a class="nav-link" href="/booking">Booking</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/checkout">Checkout</a></li>
                             <li class="nav-item"><a class="nav-link" href="/account">Account</a></li>
                             <li class="nav-item"><a class="nav-link" href="/history">History</a></li>
                             {% if session["is_admin"] %}
-                                <li><a href="/reports">Reports</a></li>
+                                <li class="nav-item"><a class="nav-link" href="/reports">Reports</a></li>
                             {% endif %}
                         </ul>
                         <ul class="navbar-nav ms-auto mt-2">

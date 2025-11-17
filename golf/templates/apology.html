@@ -5,5 +5,17 @@
 {% endblock %}
 
 {% block main %}
-    <h1> {{ bottom }} </h1>
+<div class="container text-center py-5">
+    
+    <h1 class="display-1 fw-bold">{{ top }}</h1>
+    
+    <h2 class="mb-4">{{ bottom }}</h2>
+    
+    <p>
+        <a href="javascript:history.back()" class="btn btn-green">
+            <i class="bi bi-arrow-left"></i> Go Back to Previous Page
+        </a>
+    </p>
+
+</div>
 {% endblock %}
