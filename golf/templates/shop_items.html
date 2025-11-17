@@ -27,9 +27,14 @@
 
             // remove item from page
             btn.closest(".list-group-item").remove();
-        } else {
-            alert("Error adding to cart.");
-        }
+
+            const cartCount = document.getElementById("cart-count");
+            if (cartCount && data.cart_count !== undefined) {
+            cartCount.textContent = data.cart_count;
+
+            } else {
+              alert("Error adding to cart.");
+            }}
     })
     .catch(err => console.error(err));
   }

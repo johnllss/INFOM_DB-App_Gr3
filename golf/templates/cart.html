@@ -28,45 +28,35 @@
             </thead>
             <tbody>
             {% for item in cart_items %}
-            <tr>
-                <td>{{ item.name }}</td>
+                <tr>
+                    <td>{{ item.name }}</td>
 
-                <!-- Quantity Controls -->
-                <td class="text-center">
-                <div class="d-inline-flex align-items-center">
-                    <form action="{{ url_for('update_cart') }}" method="POST" class="d-inline">
-                    <input type="hidden" name="item_id" value="{{ item.id }}">
-                    <input type="hidden" name="action" value="increase">
-                    <button type="submit" class="btn btn-sm btn-success rounded-circle me-2">+</button>
-                    </form>
+                    <!-- Quantity Controls (non-functional buttons for now) -->
+                    <td class="text-center">
+                        <div class="d-inline-flex align-items-center">
 
-                    <span>{{ item.quantity }}</span>
+                            <button type="button" class="btn btn-success quantity-btn me-2">-</button>
+                            <span class="mx-1 quantity-value">{{ item.quantity }}</span>
+                            <button type="button" class="btn btn-success quantity-btn ms-2">+</button>
 
-                    <form action="{{ url_for('update_cart') }}" method="POST" class="d-inline ms-2">
-                    <input type="hidden" name="item_id" value="{{ item.id }}">
-                    <input type="hidden" name="action" value="decrease">
-                    <button type="submit" class="btn btn-sm btn-success rounded-circle">−</button>
-                    </form>
-                </div>
-                </td>
+                        </div>
+                    </td>
 
-                <!-- Subtotal -->
-                <td class="text-center">₱{{ "%.2f"|format(item.price * item.quantity) }}</td>
+                    <!-- Subtotal -->
+                    <td class="text-center" data-price="{{ (item.price * item.quantity) }}">₱{{ "%.2f"|format(item.price) }}</td>
 
-                <!-- Delete -->
-                <td class="text-center">
-                <form action="{{ url_for('remove_from_cart') }}" method="POST">
-                    <input type="hidden" name="item_id" value="{{ item.id }}">
-                    <button type="submit" class="btn btn-link text-danger fs-5 p-0">
-                    <i class="bi bi-trash"></i>
-                    </button>
-                </form>
-                </td>
-            </tr>
-            {% else %}
-            <tr>
-                <td colspan="4" class="text-center">Your cart is empty.</td>
-            </tr>
+                    <!-- Delete (working button) -->
+                    <td class="text-center">
+                        <button type="button" class="btn btn-link text-danger fs-5 p-0 remove-btn"
+                                data-item-id="{{ item.item_id }}">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="text-center">Your cart is empty.</td>
+                </tr>
             {% endfor %}
             </tbody>
         </table>
@@ -77,7 +67,7 @@
                 <hr>
                 <div class="d-flex justify-content-between align-items-center mb-2">
                 <span class="fw-bold fs-5">Total</span>
-                <span class="fw-bold fs-5">₱{{ "%.2f"|format(total) }}</span> 
+                <span class="fw-bold fs-5" id="cart-total">₱{{ "%.2f"|format(total) }}</span>
                 </div>
                 <a href="/checkout" class="btn btn-success w-100 mt-2">Checkout Now</a>
             </div>
@@ -88,4 +78,81 @@
 
 </div>
 
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const removeButtons = document.querySelectorAll(".remove-btn");
+    const quantityControls = document.querySelectorAll(".quantity-btn");
+    const totalEl = document.getElementById("cart-total");
+    const tbody = document.querySelector("tbody");
+
+    // --- Remove item ---
+    removeButtons.forEach(button => {
+        button.addEventListener("click", () => {
+            const itemId = button.dataset.itemId;
+            if (!confirm("Are you sure you want to remove this item?")) return;
+
+            fetch("/api/remove_from_cart", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({ item_id: itemId })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success){
+                    const row = button.closest("tr");
+                    row.remove();
+                    totalEl.textContent = "₱" + parseFloat(data["cart-total"]).toFixed(2);
+
+                    if(tbody.querySelectorAll("tr").length === 0){
+                        tbody.innerHTML = `<tr><td colspan="4" class="text-center">Your cart is empty.</td></tr>`;
+                        totalEl.textContent = "₱0.00";
+                    }
+                } else alert("Failed to remove item.");
+            })
+            .catch(err => console.error(err));
+        });
+    });
+
+    // --- Quantity buttons ---
+    quantityControls.forEach(button => {
+        button.addEventListener("click", () => {
+            const row = button.closest("tr");
+            const itemId = row.querySelector(".remove-btn").dataset.itemId;
+            let quantity = parseInt(row.querySelector(".quantity-value").textContent);
+
+            if(button.textContent.trim() === "+") quantity += 1;
+            else if(button.textContent.trim() === "-") quantity = Math.max(1, quantity - 1);
+
+            // Disable minus button if quantity is 1
+            const minusBtn = row.querySelector(".quantity-btn:first-child");
+            minusBtn.disabled = (quantity === 1);
+
+            // Send update to backend
+            fetch("/api/update_cart_quantity", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({ item_id: itemId, quantity: quantity })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success){
+                    // Update quantity display
+                    row.querySelector(".quantity-value").textContent = quantity;
+
+                    // Update subtotal for row
+                    const subtotalEl = row.querySelector("td[data-price]");
+                    const price = parseFloat(subtotalEl.dataset.price);
+                    subtotalEl.textContent = "₱" + (price * quantity).toFixed(2);
+
+                    // Update total from server
+                    document.getElementById("cart-total").textContent = "₱" + parseFloat(data["cart-total"]).toFixed(2);
+                } else {
+                    alert("Failed to update cart.");
+                }
+            })
+            .catch(err => console.error(err));
+        });
+    });
+});
+</script>
 {% endblock %}

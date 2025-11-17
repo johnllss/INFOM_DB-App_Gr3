@@ -143,6 +143,18 @@ hr {
     cursor: pointer;
 }
 
+.quantity-btn {
+    width: 32px;  
+    height: 32px;
+    padding: 0;    
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;
+    font-weight: bold;
+    font-size: 1rem;
+}
+
 .count-container {
   display: flex;
   align-items: center;

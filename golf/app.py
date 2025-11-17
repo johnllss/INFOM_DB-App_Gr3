@@ -1,4 +1,4 @@
-from flask import Flask, redirect, render_template, request, session
+from flask import Flask, redirect, render_template, request, session, jsonify
 from flask_session import Session
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask_mysqldb import MySQL
@@ -196,16 +196,22 @@ def add_subscription_to_cart():
 @app.route("/shop", methods=["GET", "POST"])
 @login_required
 def shop():
+
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
 
     # Query the database
     item_type = request.args.get('type') 
     category = request.args.get('category') 
+    search = request.args.get("q", "").strip()
 
     print(item_type) 
-    query = ("SELECT * FROM item WHERE 1=1") 
-    
+    query = ("SELECT * FROM item WHERE cart_id IS NULL") 
     param = [] 
+
+    if search != "":
+        query += " AND name LIKE %s"
+        param.append(f"%{search}%")
+
     if item_type: 
         if item_type != 'all': 
             query += " AND type = %s" 
@@ -229,7 +235,40 @@ def shop():
     
 
     cursor.close() # Example count 
-    return render_template("shop.html", items=items, selected_type=item_type, selected_category=category, cartNum=cartNum)
+    return render_template("shop.html", items=items, selected_type=item_type, selected_category=category, cartNum=cartNum, search=search)
+
+
+@app.route("/api/remove_from_cart", methods=["POST"])
+@login_required
+def remove_from_cart():
+
+    data = request.get_json()
+    item_id = data.get("item_id")
+
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor.execute("UPDATE item SET cart_id = NULL, quantity = 1 WHERE item_id = %s", (item_id,))
+    mysql.connection.commit()
+
+    cursor.execute("SELECT cart_id FROM cart WHERE user_id = %s", (session["user_id"],))
+    cart = cursor.fetchone()
+    cart_id = cart["cart_id"]
+
+    items_total = 0
+
+    cursor.execute("SELECT price * quantity AS total FROM item WHERE cart_id = %s", (cart_id,))
+    items = cursor.fetchall()
+
+    if items:
+        items_total = sum(item["total"] for item in items)
+
+    print(items_total)
+
+    cursor.execute("UPDATE cart SET total_price = %s WHERE cart_id = %s", (items_total, cart_id))
+    mysql.connection.commit()
+
+    cursor.close()
+
+    return jsonify({"success": True, "cart-total": items_total})
 
 
 
@@ -263,40 +302,80 @@ def add_to_cart():
     cursor.execute("UPDATE item SET cart_id = %s WHERE item_id = %s", (cart_id, item_id))
     mysql.connection.commit()
 
-    cursor.execute("SELECT price FROM item WHERE cart_id = %s", (cart_id,))
+    cursor.execute("SELECT price * quantity AS total FROM item WHERE cart_id = %s", (cart_id,))
     items = cursor.fetchall()
 
-    items_total = sum(item["price"] for i in items)
+    items_total = sum(item["total"] for item in items)
 
     cursor.execute("UPDATE cart SET total_price = %s WHERE cart_id = %s", (items_total, cart_id))
     mysql.connection.commit()
 
+    cursor.execute("SELECT COUNT(item_id) AS numm FROM item WHERE cart_id = %s", (cart_id,))
+    new_count = cursor.fetchone()['numm']
+
     cursor.close()
-    return{"status": "success"}
+    return jsonify({"status": "success", "cart_count": new_count})
 
 
+@app.route("/api/update_cart_quantity", methods=["POST"])
+@login_required
+def update_cart_quantity():
+    
+    data = request.get_json()
+    item_id = data.get("item_id")
+    quantity = data.get("quantity")
 
-# Cart Checkout
+    if not item_id or not quantity:
+        return jsonify({"success": False, "error": "Missing data"}), 400
+
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+
+    # Update quantity in item table
+    cursor.execute("UPDATE item SET quantity = %s WHERE item_id = %s", (quantity, item_id))
+    mysql.connection.commit()
+
+    # Recalculate total for the cart
+    cursor.execute("SELECT cart_id FROM cart WHERE user_id = %s", (session["user_id"],))
+    cart = cursor.fetchone()
+    cart_id = cart["cart_id"]
+
+    cursor.execute("SELECT price * quantity AS total FROM item WHERE cart_id = %s", (cart_id,))
+    items = cursor.fetchall()
+    items_total = sum(item["total"] for item in items) if items else 0
+
+    cursor.execute("UPDATE cart SET total_price = %s WHERE cart_id = %s", (items_total, cart_id))
+    mysql.connection.commit()
+
+    cursor.execute("SELECT price * quantity AS total FROM item WHERE item_id = %s", (item_id,))
+    sub_total = cursor.fetchone()["total"]
+
+    cursor.close()
+    return jsonify({"success": True, "cart-total": items_total, "sub-tot": sub_total})
+
 @app.route("/cart", methods=["GET", "POST"])
 @login_required
 def cart():
         
-    cursor = mysql.connection.cursor()
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
 
     cursor.execute("SELECT cart_id FROM cart WHERE user_id = %s", (session["user_id"],))
     cart = cursor.fetchone()
+    cart_id = cart['cart_id']
 
     if cart:
-        cart_id = cart['cart_id']
         cursor.execute("SELECT * FROM item WHERE cart_id = %s", (cart_id,))
         cart_items = cursor.fetchall()
     else:
         cart_items = []
 
-    cursor.close()
-
     # Calculate total
-    total = 67
+
+    cursor.execute("SELECT total_price FROM cart WHERE cart_id = %s", (cart_id,))
+    price_total = cursor.fetchone()
+    
+    total = price_total["total_price"]
+
+    cursor.close()
 
     return render_template("cart.html", cart_items=cart_items, total=total)
 
