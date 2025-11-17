@@ -229,10 +229,34 @@ def process_membership_payment(cur, user_id):
 # TODO: Jerry
 def process_cart_payment(cur, user_id, checkout_context):
 
-    cur.execute("SELECT cart_id FROM cart WHERE user_id = %s" (user_id,))
-    cart_id = cur.fetchone()["cart_id"]
+    cur.execute("SELECT * FROM cart WHERE status = 'active' AND user_id = %s", (user_id,))
+    old_cart = cur.fetchone()
 
-    return
+    cur.execute("SELECT * FROM item WHERE cart_id = %s", (old_cart["cart_id"],))
+    old_items = cur.fetchall()
+
+    cur.execute("UPDATE cart SET status = 'archived' WHERE cart_id = %s", (old_cart["cart_id"],))
+
+
+    cur.execute("INSERT INTO cart (user_id) VALUES (%s)", (user_id,))
+
+    for item in old_items:
+        cur.execute("""INSERT INTO item (name, category, type, price) 
+                       VALUES (%s, %s, %s, %s)""", 
+                    (
+                    item["name"], 
+                    item["category"], 
+                    item["type"], 
+                    item["price"]
+                    ))
+        
+    mysql.connection.commit()
+
+    cur.execute("""
+                INSERT INTO payment (total_price, date_paid, payment_method, status, discount_applied, user_id, cart_id, session_user_id) 
+                VALUES (%s, NOW(), %s, 'Paid', 0.00, %s, %s, NULL)""",
+                (old_cart["total_price"], payment_method_enum, user_id, old_cart["cart_id"]))
+    
 
 # TODO: Ronald
 def process_golf_session_payment(cur, user_id, checkout_context):
