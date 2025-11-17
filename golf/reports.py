@@ -63,6 +63,9 @@ def get_quarterly_staff_report(mysql):
 
 # TODO: Jerry, Inventory Report
 def get_inventory_report(mysql):
+    query = """
+    SELECT type, 
+    """
     pass
 
 # TODO: JL, Customer Value Report

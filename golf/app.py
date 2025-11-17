@@ -380,7 +380,7 @@ def cart():
 
     cursor.execute("SELECT cart_id FROM cart WHERE user_id = %s", (session["user_id"],))
     cart = cursor.fetchone()
-    cart_id = cart['cart_id']
+    cart_id = cart["cart_id"]
 
     if cart:
         cursor.execute("SELECT * FROM item WHERE cart_id = %s", (cart_id,))

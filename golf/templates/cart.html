@@ -43,7 +43,7 @@
                     </td>
 
                     <!-- Subtotal -->
-                    <td class="text-center" data-price="{{ (item.price * item.quantity) }}">₱{{ "%.2f"|format(item.price) }}</td>
+                    <td class="text-center" data-price="{{ item.price }}">₱{{ "%.2f"|format(item.price * item.quantity) }}</td>
 
                     <!-- Delete (working button) -->
                     <td class="text-center">

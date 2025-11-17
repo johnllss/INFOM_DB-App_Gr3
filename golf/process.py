@@ -228,6 +228,10 @@ def process_membership_payment(cur, user_id):
 
 # TODO: Jerry
 def process_cart_payment(cur, user_id, checkout_context):
+
+    cur.execute("SELECT cart_id FROM cart WHERE user_id = %s" (user_id,))
+    cart_id = cur.fetchone()["cart_id"]
+
     return
 
 # TODO: Ronald
