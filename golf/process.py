@@ -1,6 +1,7 @@
 from flask import session, request
 from datetime import datetime, timedelta
-from helpers import MEMBERSHIPS
+from helpers import MEMBERSHIPS, apology
+from decimal import Decimal
 
 def load_checkout_context(cur, user_id):
     checkout_context = {
@@ -14,8 +15,8 @@ def load_checkout_context(cur, user_id):
         "subtotal": 0,
         "total": 0,
     }
-    session_price = 0
-    staff_price = 0
+    total_session_price = Decimal('0.0')
+    total_staff_price = Decimal('0.0')
 
     # MEMBERSHIP HANDLING
     if "checkout_details" in session and session["checkout_details"]["type"] == "membership":
@@ -33,57 +34,52 @@ def load_checkout_context(cur, user_id):
         checkout_context["cart_fee"] = cart["total_price"]
 
     # SESSION HANDLING
-    cur.execute("SELECT session_user_id FROM payment WHERE user_id = %s", (user_id,))
-    session_user = cur.fetchone()
+    # Get ALL pending sessions and their base prices in one query
+    cur.execute("""
+        SELECT 
+            su.session_user_id,
+            su.coach_id,
+            su.caddie_id,
+            su.buckets,
+            gs.session_price
+        FROM 
+            session_user su
+        JOIN 
+            golf_session gs ON su.session_id = gs.session_id
+        WHERE 
+            su.user_id = %s AND su.status = 'Pending'
+    """, (user_id,))
     
-    # if user_id exists and matches
-    if session_user and session_user["session_user_id"]:
-        # if user booked for a pending session
-        cur.execute("""
-            SELECT gs.session_price AS price
-            FROM golf_session gs
-            JOIN session_user su ON gs.session_id = su.session_id
-            WHERE su.session_user_id = %s
-        """, (user_id,))
-        golf_session = cur.fetchone()
+    # Use fetchall() to get every pending session
+    all_pending_sessions = cur.fetchall()
+    
+    # Loop through each pending session and add its cost
+    for pending_session in all_pending_sessions:
+        
+        # 1. Add base session price
+        total_session_price += pending_session["session_price"]
 
-        if golf_session:
-            session_price = golf_session["price"]
+        # 2. Add bucket fees (if any)
+        if pending_session["buckets"] and pending_session["buckets"] > 0:
+            total_session_price += Decimal(pending_session["buckets"] * 300)
 
-            # if driving range, check buckets ordered
-            cur.execute("""
-                SELECT buckets
-                FROM session_user
-                WHERE session_user_id = %s
-            """, (user_id,))
-            buckets = cur.fetchone()
+        # 3. Add staff fees (if any)
+        
+        # if coach
+        if pending_session["coach_id"]:
+            cur.execute("SELECT service_fee FROM staff WHERE staff_id = %s", (pending_session["coach_id"],))
+            staff_fee = cur.fetchone()
+            if staff_fee:
+                total_staff_price += staff_fee["service_fee"]
+        
+        # if caddie
+        if pending_session["caddie_id"]:
+            cur.execute("SELECT service_fee FROM staff WHERE staff_id = %s", (pending_session["caddie_id"],))
+            staff_fee = cur.fetchone()
+            if staff_fee:
+                total_staff_price += staff_fee["service_fee"]
 
-            if buckets and buckets["buckets"] != 0:
-                session_price += buckets["buckets"] * 300
-
-        # if user asked for a coach or caddie
-        cur.execute("""
-            SELECT coach_id, caddie_id
-            FROM session_user
-            WHERE session_user_id = %s
-        """, (user_id,))
-        staff = cur.fetchone()
-
-        if staff:
-            staff_price = 0
-            # if coach
-            if staff["coach_id"]:
-                cur.execute("SELECT service_fee FROM staff WHERE staff_id = %s", (staff["coach_id"],))
-                staff_fee = cur.fetchone()
-                if staff_fee:
-                    staff_price += staff_fee["service_fee"]
-            # if caddie
-            if staff["caddie_id"]:
-                cur.execute("SELECT service_fee FROM staff WHERE staff_id = %s", (staff["caddie_id"],))
-                staff_fee = cur.fetchone()
-                if staff_fee:
-                    staff_price += staff_fee["service_fee"]
-    checkout_context["session_fee"] = session_price + staff_price
+    checkout_context["session_fee"] = total_session_price + total_staff_price
     
     # Exclude membership fee first
     subtotal = checkout_context["session_fee"] + checkout_context["cart_fee"]
@@ -93,7 +89,8 @@ def load_checkout_context(cur, user_id):
 
     # Membership Discount
     checkout_context["discount_percent"] = get_user_discount(cur, user_id)
-    checkout_context["discount_amount"] = (subtotal) * (checkout_context["discount_percent"] / 100.0)
+    # Convert the percentage and 100 to Decimal for the calculation
+    checkout_context["discount_amount"] = subtotal * (Decimal(checkout_context["discount_percent"]) / Decimal('100.0'))
 
     # Loyalty Points Discount
     cur.execute("SELECT loyalty_points FROM user WHERE user_id = %s", (user_id,))
@@ -119,16 +116,16 @@ def get_user_discount(cur, user_id):
 
     # 0 discount if not a user or membership_end is empty
     if not user or not user['membership_end']:
-        return 0
+        return 0.0
     
     # 0 discount if membership has ended
     if user['membership_end'] < datetime.now().date():
-        return 0
+        return 0.0
     
     # Retrieve tier and 0 discount if not in system-specified tiers
     membership_tier = user['membership_tier']
     if membership_tier not in MEMBERSHIPS:
-        return 0
+        return 0.0
 
     # Extract discount through membership_tier
     return MEMBERSHIPS[membership_tier]['discount']

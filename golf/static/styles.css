@@ -16,6 +16,13 @@ nav .navbar-brand
   font-size: x-large;
 }
 
+.pending-box {
+  background-color: rgba(255, 255, 255, 0.1); /* Faint white box */
+  backdrop-filter: blur(5px);
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
 .btn-green {
   background-color: #2e944b;
   border-color: #2e944b;

@@ -138,9 +138,26 @@ def homepage():
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cur.execute("SELECT first_name FROM user WHERE user_id = %s", (session["user_id"],))
     first_name = cur.fetchone()
+
+    cur.execute("""
+        SELECT 
+            gs.type, 
+            DATE_FORMAT(gs.session_schedule, '%%Y-%%m-%%d') AS session_date_formatted, 
+            TIME_FORMAT(gs.session_schedule, '%%h:%%i %%p') AS session_time_formatted
+        FROM 
+            golf_session gs
+        JOIN 
+            session_user su ON gs.session_id = su.session_id
+        WHERE 
+            su.user_id = %s AND su.status = 'Pending'
+        ORDER BY 
+            gs.session_schedule;
+    """, (session["user_id"],))
+    pending_sessions = cur.fetchall()
+
     cur.close()
 
-    return render_template("home.html", user=first_name)
+    return render_template("home.html", user=first_name, pending_sessions=pending_sessions)
 
 # Membership
 @app.route("/membership", methods=["GET", "POST"])
