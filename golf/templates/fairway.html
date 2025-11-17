@@ -7,7 +7,7 @@
 {% block main %}
 <div class="container-fluid px-5">
     
-    <form action="/booking-fairway" method="post">
+    <form action="/booking/fairway" method="post">
         
         <div class="row">
             <h1 class="text-left display-3 fw-bold mt-4 mb-5">
@@ -37,10 +37,10 @@
 
                     <div class="col-md-3">
                         <label for="hole-selector" class="form-label fw-bold">Round</label>
-                        <select class="form-select" name="booking-hole">
-                            <option value="18">FULL 18</option>
-                            <option value="9B">9 BACK</option>
-                            <option value="9F">9 FRONT</option>
+                        <select class="form-select" name="booking-hole" id="hole-selector">
+                            <option value="FULL 18">FULL 18</option>
+                            <option value="9 BACK">9 BACK</option>
+                            <option value="9 FRONT">9 FRONT</option>
                         </select>
                     </div>
 
@@ -105,7 +105,7 @@
 
                     <div class="d-flex justify-content-between mb-2">
                         <span>Round</span>
-                        <strong>₱5000</strong>
+                        <strong id="hole-text">₱5000</strong>
                     </div>
 
                     <div class="d-flex justify-content-between mb-2">
@@ -134,7 +134,7 @@
 </div> 
 
 <script>
-    function checkStaffAvailability(selectorId, availabilityId, textID) {
+    function checkStaff(selectorId, availabilityId, textID) {
         const selector = document.getElementById(selectorId);
         const availabilityText = document.getElementById(availabilityId);
         const staffPriceText = document.getElementById(textID);
@@ -144,6 +144,7 @@
 
         if (selectedStaffId === "0") {
             availabilityText.textContent = ""; 
+            staffPriceText.textContent = `₱0`;
             return 0; 
         }
 
@@ -163,29 +164,54 @@
         return staffPrice;
     }
 
+    function getPrice() {
+        const totalText = document.getElementById('total-price');
+        const coachPrice = checkStaff('coach-selector', 'coach-availability', 'coach-text');
+        const caddiePrice = checkStaff('caddie-selector', 'caddie-availability', 'caddie-text');
+        const roundPrice = getHolePrice();
+        const total = roundPrice + caddiePrice + coachPrice;
+        totalText.textContent = `₱${total}`;
+    }
+
+    function getHolePrice() {
+        const selector = document.getElementById('hole-selector');
+        const holeText = document.getElementById('hole-text');
+        const selectedHole = selector.value;
+        let holePrice = 0;
+
+        if (selectedHole === 'FULL 18') {
+            holePrice = 5000;
+        } else {
+            holePrice = 3000;
+        }
+
+        holeText.textContent = `₱${holePrice}`;
+        return holePrice;
+    }
+
     // 3. ATTACH EVENT LISTENERS
     const coachSelector = document.getElementById('coach-selector');
     const caddieSelector = document.getElementById('caddie-selector');
+    const holeSelector = document.getElementById('hole-selector');
+    
 
+    holeSelector.addEventListener('change', () => {
+        getHolePrice();
+        getPrice()
+    });
     coachSelector.addEventListener('change', () => {
-        checkStaffAvailability('coach-selector', 'coach-availability', 'coach-text');
+        checkStaff('coach-selector', 'coach-availability', 'coach-text');
         getPrice()
     });
     caddieSelector.addEventListener('change', () => {
-        checkStaffAvailability('caddie-selector', 'caddie-availability', 'caddie-text');
+        checkStaff('caddie-selector', 'caddie-availability', 'caddie-text');
         getPrice()
     });
 
-    // 4. RUN ON PAGE LOAD
-    checkStaffAvailability('coach-selector', 'coach-availability', 'coach-text');
-    checkStaffAvailability('caddie-selector', 'caddie-availability', 'caddie-text');
 
-    function getPrice() {
-        const totalText = document.getElementById('total-price');
-        coachPrice = checkStaffAvailability('coach-selector', 'coach-availability', 'coach-text');
-        caddiePrice = checkStaffAvailability('caddie-selector', 'caddie-availability', 'caddie-text');
-        total = caddiePrice + coachPrice + 5000;
-        totalText.textContent = `₱${total}`;
-    }
+    // 4. RUN ON PAGE LOAD
+    checkStaff('coach-selector', 'coach-availability', 'coach-text');
+    checkStaff('caddie-selector', 'caddie-availability', 'caddie-text');
+
 </script>
 {% endblock %}
