@@ -48,7 +48,7 @@ CREATE TABLE staff (
 CREATE TABLE golf_session (
     session_id          INT PRIMARY KEY AUTO_INCREMENT,
     type                ENUM('Driving Range','Fairway'),
-    holes               ENUM('Half 9','Full 18'),
+    holes               ENUM('9 Front', '9 Back','Full 18'),
     session_schedule    DATETIME NOT NULL,
     people_limit        INT,
     status              ENUM('Available','Fully Booked','Ongoing','Finished') NOT NULL,
@@ -65,7 +65,7 @@ CREATE TABLE session_user (
     longest_range   INT DEFAULT NULL,
     buckets         INT,
     loyalty_earned  INT DEFAULT 0,
-    status          ENUM('Cancelled', 'Pending', 'Confirmed'),
+    status          ENUM('Cancelled', 'Pending', 'Confirmed') DEFAULT 'Pending',
     UNIQUE (session_id, user_id),
     CONSTRAINT fk_user FOREIGN KEY (user_id)
         REFERENCES user(user_id)

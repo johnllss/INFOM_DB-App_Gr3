@@ -7,7 +7,7 @@
 {% block main %}
 <div class="container-fluid px-5">
     
-    <form action="/booking-range" method="post">
+    <form action="/booking/range" method="post">
         
         <div class="row">
             <h1 class="text-left display-3 fw-bold mt-4 mb-5">
@@ -57,7 +57,7 @@
                             &plus;
                         </button>
                         
-                        <input type="hidden" id="hiddenValue" value="1">
+                        <input type="hidden" name="buckets-value" id="hiddenValue" value="1">
                     </div>
                 </div>
 
@@ -151,17 +151,18 @@
         getPrice()
     });
 
-    function checkStaff(selectorId, availabilityId) {
-        const coachText = document.getElementById("coach-price");
+    function checkStaff(selectorId, availabilityId, textID) {
         const selector = document.getElementById(selectorId);
         const availabilityText = document.getElementById(availabilityId);
+        const staffPriceText = document.getElementById(textID);
         const selectedOption = selector.options[selector.selectedIndex];
         const selectedStaffId = selectedOption.value;
-        const selectedStaffPrice = parseFloat(selectedOption.getAttribute('fee'));
+        const staffPrice = parseFloat(selectedOption.getAttribute('fee'));
 
         if (selectedStaffId === "0") {
             availabilityText.textContent = ""; 
-            return 0;
+            staffPriceText.textContent = `₱0`;
+            return 0; 
         }
 
         // read the string
@@ -176,8 +177,8 @@
             availabilityText.className = 'h5 fw-bold text-danger mb-0';
         }
 
-        coachText.textContent = `₱${selectedStaffPrice}`;
-        return selectedStaffPrice;
+        staffPriceText.textContent = `₱${staffPrice}`; 
+        return staffPrice;
     }
 
     // 3. ATTACH EVENT LISTENERS
@@ -185,18 +186,18 @@
     const caddieSelector = document.getElementById('caddie-selector');
 
     coachSelector.addEventListener('change', () => {
-        checkStaff('coach-selector', 'coach-availability');
+        checkStaff('coach-selector', 'coach-availability', 'coach-price');
         getPrice()
     });
 
     // 4. RUN ON PAGE LOAD
-    checkStaff('coach-selector', 'coach-availability');
+    checkStaff('coach-selector', 'coach-availability', 'coach-price');
 
     function getPrice() {
         const totalText = document.getElementById('total-price');
         const bucketsText = document.getElementById("buckets-price");
         const currentQuantity = parseInt(document.getElementById('hiddenValue').value);
-        coachPrice = checkStaff('coach-selector', 'coach-availability');
+        coachPrice = checkStaff('coach-selector', 'coach-availability', 'coach-price');
         bucketsPrice = currentQuantity * 300;
         total = bucketsPrice + coachPrice + 1000;
         bucketsText.textContent = `₱${bucketsPrice}`;
