@@ -4,11 +4,10 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from flask_mysqldb import MySQL
 import MySQLdb.cursors
 import helpers
-from helpers import (
-    apology, login_required, admin_required, php,
-    load_checkout_context, validate_payment_method,
-    process_membership_payment, process_golf_session_payment,
-    process_cart_payment, update_loyalty_points, cleanup_checkout_session)
+from helpers import apology, login_required, admin_required, php
+
+import process
+import reports
 
 app = Flask(__name__)
 
@@ -45,19 +44,24 @@ def register():
         first_name = request.form.get("fname")
         last_name = request.form.get("lname")
         email = request.form.get("email")
+        contact = request.form.get("contact")
         password = request.form.get("password")
         confirmation = request.form.get("confirmation")
 
         if not first_name or not last_name:
             return apology("Input your first name and last name.", 400)
-        elif not email:
+        if not email:
             return apology("Input your email.", 400)
+        if not contact:
+            return apology("Input your contact number.", 400)
 
         cur = mysql.connection.cursor()
         cur.execute("SELECT * FROM user WHERE email = %s", (email,))
         if cur.rowcount == 1:
             return apology("Email already exists.", 400)
-        cur.close()
+        cur.execute("SELECT * FROM user WHERE contact = %s", (contact,))
+        if cur.rowcount == 1:
+            return apology("Contact number already exists.", 400)
         
         if not password or not confirmation:
             return apology("Input your password and its confirmation.", 400)
@@ -67,9 +71,8 @@ def register():
         hash = generate_password_hash(password)
 
         # User Creation
-        cur = mysql.connection.cursor()
-        cur.execute("INSERT INTO user (first_name, last_name, email, hash) VALUES (%s, %s, %s, %s)",
-            (first_name, last_name, email, hash))
+        cur.execute("INSERT INTO user (first_name, last_name, email, contact, hash) VALUES (%s, %s, %s, %s, %s)",
+            (first_name, last_name, email, contact, hash))
         user_id = cur.lastrowid
         
         # Cart Creation
@@ -231,8 +234,6 @@ def shop():
     cursor.close() # Example count 
     return render_template("shop.html", items=items, selected_type=item_type, selected_category=category, cartNum=cartNum)
 
-
-
 @app.route("/api/add_to_cart", methods=["POST"])
 @login_required
 def add_to_cart():
@@ -274,8 +275,6 @@ def add_to_cart():
     cursor.close()
     return{"status": "success"}
 
-
-
 # Cart Checkout
 @app.route("/cart", methods=["GET", "POST"])
 @login_required
@@ -304,7 +303,6 @@ def cart():
 @login_required
 def booking():
     return render_template("booking.html")
-
 
 @app.route("/booking/fairway", methods=["GET", "POST"])
 @login_required
@@ -508,7 +506,23 @@ def history():
 @admin_required
 def reports():
     # Only admins can reach this point
-    return render_template("reports.html")
+    # TODO: Ronald, Sales Performance Report
+
+    # TODO: Gab, Staff Performance Report
+    yearly_staff_report = reports.get_yearly_staff_report(mysql)
+    quarterly_staff_report = reports.get_quarterly_staff_report(mysql)
+    
+    # TODO: Jerry, Inventory Report
+
+    # TODO: JL, Customer Value Report
+
+    return render_template("reports.html", 
+                           # sales_report=sales_report,
+                           yearly_staff_report=yearly_staff_report, 
+                           quarterly_staff_report=quarterly_staff_report
+                           # inventory_report=inventory_report,
+                           # customer_report=customer_report
+                           )
 
 # Checkout (where all payments are settled)
 @app.route("/checkout", methods=["GET", "POST"])
@@ -518,13 +532,13 @@ def checkout():
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
 
     # Load all payment-related context
-    checkout_context = load_checkout_context(cur, user_id)
+    checkout_context = process.load_checkout_context(cur, user_id)
 
     if request.method == "POST":
         payment_method = request.form.get("method")
 
         # Validate and standardize payment method
-        payment_method_enum, message = validate_payment_method(payment_method)
+        payment_method_enum, message = process.validate_payment_method(payment_method)
         if not payment_method_enum:
             cur.close()
             return apology("Invalid payment method.", 400)
@@ -533,18 +547,18 @@ def checkout():
             # Process payments modularly
             
             if checkout_context["membership_fee"] != 0:
-                process_membership_payment(cur, user_id)
+                process.process_membership_payment(cur, user_id)
                 pass
 
             if checkout_context["cart_fee"] != 0:
-                process_cart_payment(cur, user_id, checkout_context)
+                process.process_cart_payment(cur, user_id, checkout_context)
                 pass
 
             if checkout_context["session_fee"] != 0:
-                process_golf_session_payment(cur, user_id, checkout_context)
+                process.process_golf_session_payment(cur, user_id, checkout_context)
                 pass
 
-            update_loyalty_points(cur, user_id, checkout_context)
+            process.update_loyalty_points(cur, user_id, checkout_context)
 
             mysql.connection.commit()
 
@@ -555,7 +569,7 @@ def checkout():
             cur.close()
 
         # STEP 5: Cleanup temporary session data
-        cleanup_checkout_session(session)
+        process.cleanup_checkout_session(session)
 
         return render_template("purchased.html", message=message)
 
@@ -564,7 +578,6 @@ def checkout():
         cur.close()
         # STEP 6: Render checkout summary
         return render_template("checkout.html", **checkout_context)
-
 
 @app.route("/logout")
 def logout():
