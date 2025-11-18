@@ -3,9 +3,9 @@ from flask_session import Session
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask_mysqldb import MySQL
 import MySQLdb.cursors
-import helpers
 from helpers import apology, login_required, admin_required, php
 
+import helpers
 import process
 import reports
 
@@ -36,8 +36,6 @@ def after_request(response):
     return response
 
 # ROUTING
-
-# Register
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
@@ -91,7 +89,6 @@ def register():
     else:
         return render_template("register.html")
 
-# Log In
 @app.route("/login", methods=["GET", "POST"])
 def login():
     """Log user in"""
@@ -131,7 +128,6 @@ def login():
     else:
         return render_template("login.html")
 
-# Homepage
 @app.route("/")
 @login_required
 def homepage():
@@ -140,7 +136,8 @@ def homepage():
     first_name = cur.fetchone()
 
     cur.execute("""
-        SELECT 
+        SELECT
+            su.session_user_id,
             gs.type, 
             DATE_FORMAT(gs.session_schedule, '%%Y-%%m-%%d') AS session_date_formatted, 
             TIME_FORMAT(gs.session_schedule, '%%h:%%i %%p') AS session_time_formatted
@@ -159,7 +156,30 @@ def homepage():
 
     return render_template("home.html", user=first_name, pending_sessions=pending_sessions)
 
-# Membership
+@app.route("/cancel_booking", methods=["POST"])
+@login_required
+def cancel_booking():
+    session_user_id = request.form.get("session_user_id")
+    if not session_user_id:
+        return apology("Invalid booking.", 400)
+
+    try:
+        cur = mysql.connection.cursor()
+        cur.execute("""
+            UPDATE session_user
+            SET status = 'Cancelled'
+            WHERE session_user_id = %s AND user_id = %s AND status = 'Pending'
+        """, (session_user_id, session["user_id"]))
+        
+        mysql.connection.commit()
+        cur.close()
+
+    except Exception as e:
+        mysql.connection.rollback()
+        return apology(f"An error occurred: {e}", 500)
+
+    return redirect("/")
+
 @app.route("/membership", methods=["GET", "POST"])
 @login_required
 def membership():
@@ -172,7 +192,6 @@ def membership():
 
     return render_template("membership.html", memberships=membership_list)
 
-# Subscribe
 @app.route("/subscribe", methods=["POST"])
 @login_required
 def subscribe():
@@ -212,7 +231,6 @@ def add_subscription_to_cart():
 
     return redirect("/checkout")
 
-# Shop
 @app.route("/shop", methods=["GET", "POST"])
 @login_required
 def shop():
@@ -257,7 +275,6 @@ def shop():
     cursor.close() # Example count 
     return render_template("shop.html", items=items, selected_type=item_type, selected_category=category, cartNum=cartNum, search=search)
 
-
 @app.route("/api/remove_from_cart", methods=["POST"])
 @login_required
 def remove_from_cart():
@@ -289,8 +306,6 @@ def remove_from_cart():
     cursor.close()
 
     return jsonify({"success": True, "cart-total": items_total})
-
-
 
 @app.route("/api/add_to_cart", methods=["POST"])
 @login_required
@@ -335,7 +350,6 @@ def add_to_cart():
 
     cursor.close()
     return jsonify({"status": "success", "cart_count": new_count})
-
 
 @app.route("/api/update_cart_quantity", methods=["POST"])
 @login_required
@@ -678,7 +692,6 @@ def report():
                            quarterly_staff_report=quarterly_staff_report, #inventory_report=inventory_report, 
                            customer_report=customer_report, selectable_years=selectable_years, admin_selected_year=admin_selected_year)
 
-# Checkout (where all payments are settled)
 @app.route("/checkout", methods=["GET", "POST"])
 @login_required
 def checkout():

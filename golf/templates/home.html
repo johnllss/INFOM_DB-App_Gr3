@@ -20,9 +20,17 @@
                 <ul class="list-unstyled mb-2" style="font-size: 0.9rem;">
                     
                     {% for p_session in pending_sessions %}
-                    <li>
-                        <strong>{{ p_session.type }}</strong> on {{ p_session.session_date_formatted }}
-                        at {{ p_session.session_time_formatted }}
+                    <li class="d-flex justify-content-between align-items-center mb-2">
+                        
+                        <div>
+                            <strong>{{ p_session.type }}</strong> on {{ p_session.session_date_formatted }}
+                            at {{ p_session.session_time_formatted }}
+                        </div>
+
+                        <form action="/cancel_booking" method="POST" class="m-0">
+                            <input type="hidden" name="session_user_id" value="{{ p_session.session_user_id }}">
+                            <button type="submit" class="btn btn-outline-danger btn-sm">Cancel</button>
+                        </form>
                     </li>
                     {% endfor %}
 
