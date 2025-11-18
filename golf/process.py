@@ -175,7 +175,7 @@ def process_membership_payment(cur, user_id):
                 (user_id,))
     user = cur.fetchone()
 
-    date_today = datetime().now().date()
+    date_today = datetime.now().date()
     new_membership_start = None
     new_membership_end = None
 
@@ -204,15 +204,15 @@ def process_membership_payment(cur, user_id):
 
     # RESUBSCRIBERS
     else:
-        new_membership_start = date_today;
-        new_membership_end = date_today + timedelta(days= 30 * months)
+        new_membership_start = date_today
+        new_membership_end = date_today + timedelta(days=30 * months)
 
-    cur.execute("""
-                UPDATE user
-                SET membership_tier = %s, membership_start = %s, membership_end = %s
-                WHERE user_id = %s
-                """,
-                (tier, new_membership_start, new_membership_end, user_id))
+        cur.execute("""
+                    UPDATE user
+                    SET membership_tier = %s, membership_start = %s, membership_end = %s
+                    WHERE user_id = %s
+                    """,
+                    (tier, new_membership_start, new_membership_end, user_id))
 
 # CREATING OF RECORD IN payment TABLE
     # extract payment method 
@@ -264,7 +264,7 @@ def process_golf_session_payment(cur, user_id, checkout_context):
 
 def update_loyalty_points(cur, user_id, checkout_context):
     # get points earned from total paid in the transaction
-    payment_total = checkout_context("total")
+    payment_total = checkout_context["total"]
     points_earned = int(payment_total/10)
 
     # extract loyalty points used in the transaction

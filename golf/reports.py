@@ -9,14 +9,14 @@ def get_yearly_staff_report(mysql):
         s.staff_id,
         s.name,
         s.role,
-        YEAR(gs.session_date) AS session_year,
+        YEAR(gs.session_schedule) AS session_year,
         COUNT(su.session_user_id) AS total_sessions
     FROM
         staff s
     JOIN
         session_user su ON s.staff_id = su.coach_id OR s.staff_id = su.caddie_id
     JOIN
-        golf_session gs ON su.golf_session_id = gs.golf_session_id
+        golf_session gs ON su.session_id = gs.session_id
     GROUP BY
         s.staff_id, s.name, s.role, session_year
     ORDER BY
@@ -38,14 +38,14 @@ def get_quarterly_staff_report(mysql):
         s.staff_id,
         s.name,
         s.role,
-        CONCAT(YEAR(gs.session_date), '-Q', QUARTER(gs.session_date)) AS session_quarter,
+        CONCAT(YEAR(gs.session_schedule), '-Q', QUARTER(gs.session_schedule)) AS session_quarter,
         COUNT(su.session_user_id) AS total_sessions
     FROM
         staff s
     JOIN
         session_user su ON s.staff_id = su.coach_id OR s.staff_id = su.caddie_id
     JOIN
-        golf_session gs ON su.golf_session_id = gs.golf_session_id
+        golf_session gs ON su.session_id = gs.session_id
     GROUP BY
         s.staff_id, s.name, s.role, session_quarter
     ORDER BY
@@ -79,13 +79,13 @@ def get_customer_value_report(mysql, year=None):
         u.email,
         IF(yearlysessions.total_sessions IS NOT NULL, yearlysessions.total_sessions, 0) AS total_sessions_attended,
         IF(yearlypayments.total_spent IS NOT NULL, yearlypayments.total_spent, 0) AS total_amount_spent,
-        u.loyalty_points AS accumulated_loyalty_points
+        u.loyalty_points AS accumulated_loyalty_points,
         u.membership_tier
     FROM user u
     LEFT JOIN (
                 SELECT
                     su.user_id,
-                    COUNT(su.session_user_id) AS total_sessions,
+                    COUNT(su.session_user_id) AS total_sessions
                 FROM session_user su
                 JOIN golf_session gs ON su.session_id = gs.session_id
                 WHERE YEAR(gs.session_schedule) = %s AND su.status = 'Confirmed'
