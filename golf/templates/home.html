@@ -14,10 +14,6 @@
     <div class="row py-2 px-5">
         
         <div class="col-md-5 d-flex flex-column justify-content-end pb-1">
-            <div>
-                <p class="d-inline-block homepage-welcome lead mb-0">Welcome, {{ user }}.</p>
-                <h1 class="display-4"><em>STEP INTO A</em> <strong>GOLFER'S PARADISE AT TEETRACK</strong></h1>
-            </div>
 
             {% if pending_sessions %}
             <div class="pending-box p-3 mb-3">
@@ -34,7 +30,7 @@
 
                         <div class="d-flex gap-2">
         
-                            <form action="/checkout_specific" method="POST" class="m-0">
+                            <form action="/checkout_session" method="POST" class="m-0">
                                 <input type="hidden" name="session_user_id" value="{{ p_session.session_user_id }}">
                                 <button type="submit" class="btn btn-success btn-sm">Pay</button>
                             </form>
@@ -48,11 +44,18 @@
                     {% endfor %}
 
                 </ul>
-                <a href="/checkout" class="btn btn-light btn-sm w-100">
-                    <strong>Go to Checkout</strong>
-                </a>
+                
+                <form action="/checkout_all_sessions" method="POST" class="w-100">
+                    <button type="submit" class="btn btn-light btn-sm w-100">
+                        <strong>Checkout All Sessions</strong>
+                    </button>
+                </form>
             </div>
             {% endif %}
+            <div>
+                <p class="d-inline-block homepage-welcome lead mb-0">Welcome, {{ user }}.</p>
+                <h1 class="display-4"><em>STEP INTO A</em> <strong>GOLFER'S PARADISE AT TEETRACK</strong></h1>
+            </div>
         </div>
 
         <div class="col-md-7 mt-3 d-flex flex-column align-items-end justify-content-center">
