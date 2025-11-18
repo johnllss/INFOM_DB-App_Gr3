@@ -657,14 +657,13 @@ def report():
     # TODO: Jerry, Inventory Report
 
     # TODO: JL, Customer Value Report
+    customer_report = reports.get_customer_value_report(mysql)
 
     return render_template("reports.html", 
                            # sales_report=sales_report,
                            yearly_staff_report=yearly_staff_report, 
-                           quarterly_staff_report=quarterly_staff_report
-                           # inventory_report=inventory_report,
-                           # customer_report=customer_report
-                           )
+                           quarterly_staff_report=quarterly_staff_report, #inventory_report=inventory_report, 
+                           customer_report=customer_report)
 
 # Checkout (where all payments are settled)
 @app.route("/checkout", methods=["GET", "POST"])
