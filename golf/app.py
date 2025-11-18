@@ -167,12 +167,24 @@ def cancel_booking():
 
     try:
         cur = mysql.connection.cursor()
+        
+        # Get the session_id BEFORE cancelling
+        cur.execute("SELECT session_id FROM session_user WHERE session_user_id = %s", (session_user_id,))
+        result = cur.fetchone()
+        if not result:
+             return apology("Booking not found", 404)
+        session_id = result['session_id']
+
+        # Cancel the user booking
         cur.execute("""
             UPDATE session_user
             SET status = 'Cancelled'
             WHERE session_user_id = %s AND user_id = %s AND status = 'Pending'
         """, (session_user_id, session["user_id"]))
         
+        # Check if we need to open the session back up (If it was 'Fully Booked', make it 'Available')
+        cur.execute("UPDATE golf_session SET status = 'Available' WHERE session_id = %s AND status = 'Fully Booked'", (session_id,))
+
         mysql.connection.commit()
         cur.close()
 
@@ -479,7 +491,9 @@ def check_staff_availability():
             s.max_clients, 
             COUNT(su.session_id) AS current_bookings
         FROM staff s
-        LEFT JOIN session_user su ON s.staff_id = su.coach_id OR s.staff_id = su.caddie_id
+        LEFT JOIN session_user su ON 
+            (s.staff_id = su.coach_id OR s.staff_id = su.caddie_id) 
+            AND su.status != 'Cancelled'
         LEFT JOIN golf_session gs ON su.session_id = gs.session_id AND gs.session_schedule = %s
         WHERE s.staff_id = %s
         GROUP BY s.staff_id, s.max_clients
@@ -546,6 +560,7 @@ def fairway():
             # Insert session_user entry
             cur.execute("INSERT INTO session_user (user_id, session_id, status) VALUES (%s, %s, %s)",
                         (session['user_id'], session_id, "Pending"))
+            session["single_checkout_id"] = cur.lastrowid
 
             # Check if session is now fully booked
             cur.execute("SELECT COUNT(*) as count FROM session_user WHERE session_id = %s", (session_id,))
@@ -560,7 +575,7 @@ def fairway():
                 cur.execute("""
                     SELECT s.max_clients, COUNT(su.session_id) AS current_bookings
                     FROM staff s
-                    LEFT JOIN session_user su ON s.staff_id = su.coach_id
+                    LEFT JOIN session_user su ON s.staff_id = su.coach_id AND su.status != 'Cancelled'
                     LEFT JOIN golf_session gs ON su.session_id = gs.session_id AND gs.session_schedule = %s
                     WHERE s.staff_id = %s
                     GROUP BY s.staff_id, s.max_clients
@@ -578,7 +593,7 @@ def fairway():
                 cur.execute("""
                     SELECT s.max_clients, COUNT(su.session_id) AS current_bookings
                     FROM staff s
-                    LEFT JOIN session_user su ON s.staff_id = su.caddie_id
+                    LEFT JOIN session_user su ON s.staff_id = su.caddie_id AND su.status != 'Cancelled'
                     LEFT JOIN golf_session gs ON su.session_id = gs.session_id AND gs.session_schedule = %s
                     WHERE s.staff_id = %s
                     GROUP BY s.staff_id, s.max_clients
@@ -634,7 +649,6 @@ def range():
             if cur.rowcount == 0:
                 cur.execute("INSERT INTO golf_session (type, session_schedule, people_limit, status, session_price) VALUES (%s, %s, %s, %s, %s)",
                             ('Driving Range', datetime_str, 25, "Available", 1000))
-                session_id = cur.lastrowid
             else:
                 golf_session = cur.fetchone()
                 if golf_session['status'] == 'Fully Booked':
@@ -645,6 +659,7 @@ def range():
             # Insert session_user entry
             cur.execute("INSERT INTO session_user (user_id, session_id, status, buckets) VALUES (%s, %s, %s, %s)",
                         (session['user_id'], session_id, "Pending", bucket))
+            session["single_checkout_id"] = cur.lastrowid
 
             # Check if session is now fully booked
             cur.execute("SELECT COUNT(*) as count FROM session_user WHERE session_id = %s", (session_id,))
@@ -659,7 +674,7 @@ def range():
                 cur.execute("""
                     SELECT s.max_clients, COUNT(su.session_id) AS current_bookings
                     FROM staff s
-                    LEFT JOIN session_user su ON s.staff_id = su.coach_id
+                    LEFT JOIN session_user su ON s.staff_id = su.coach_id AND su.status != 'Cancelled'
                     LEFT JOIN golf_session gs ON su.session_id = gs.session_id AND gs.session_schedule = %s
                     WHERE s.staff_id = %s
                     GROUP BY s.staff_id, s.max_clients
@@ -812,6 +827,15 @@ def report():
                            quarterly_staff_report=quarterly_staff_report, #inventory_report=inventory_report, 
                            customer_report=customer_report, selectable_years=selectable_years, admin_selected_year=admin_selected_year)
 
+@app.route("/checkout_specific", methods=["POST"])
+@login_required
+def checkout_specific():
+    session_user_id = request.form.get("session_user_id")
+
+    session["single_checkout_id"] = session_user_id
+    
+    return redirect("/checkout")
+
 @app.route("/checkout", methods=["GET", "POST"])
 @login_required
 def checkout():
@@ -837,10 +861,10 @@ def checkout():
                 process.process_membership_payment(cur, user_id)
 
             if checkout_context["cart_fee"] != 0:
-                process.process_cart_payment(cur, user_id, checkout_context, mysql, payment_method_enum)
+                process.process_cart_payment(cur, user_id, mysql, payment_method_enum)
 
             if checkout_context["session_fee"] != 0:
-                process.process_golf_session_payment(cur, user_id, checkout_context)
+                process.process_golf_session_payment(cur, user_id, checkout_context, payment_method_enum)
 
             process.update_loyalty_points(cur, user_id, checkout_context)
 
@@ -852,7 +876,6 @@ def checkout():
         finally:
             cur.close()
 
-        # STEP 5: Cleanup temporary session data
         process.cleanup_checkout_session(session)
 
         return render_template("purchased.html", message=message)

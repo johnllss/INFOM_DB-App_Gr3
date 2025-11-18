@@ -15,8 +15,6 @@ def load_checkout_context(cur, user_id):
         "subtotal": 0,
         "total": 0,
     }
-    total_session_price = Decimal('0.0')
-    total_staff_price = Decimal('0.0')
 
     # MEMBERSHIP HANDLING
     if "checkout_details" in session and session["checkout_details"]["type"] == "membership":
@@ -34,47 +32,40 @@ def load_checkout_context(cur, user_id):
         checkout_context["cart_fee"] = cart["total_price"]
 
     # SESSION HANDLING
-    # Get ALL pending sessions and their base prices in one query
-    cur.execute("""
-        SELECT 
-            su.session_user_id,
-            su.coach_id,
-            su.caddie_id,
-            su.buckets,
-            gs.session_price
-        FROM 
-            session_user su
-        JOIN 
-            golf_session gs ON su.session_id = gs.session_id
-        WHERE 
-            su.user_id = %s AND su.status = 'Pending'
-    """, (user_id,))
-    
-    # Use fetchall() to get every pending session
-    all_pending_sessions = cur.fetchall()
-    
-    # Loop through each pending session and add its cost
-    for pending_session in all_pending_sessions:
-        
+    total_session_price = Decimal('0.0')
+    total_staff_price = Decimal('0.0')
+
+    target_id = session.get("single_checkout_id")
+    if target_id:
+        cur.execute("""
+            SELECT 
+                su.session_user_id, su.coach_id, su.caddie_id, su.buckets, gs.session_price
+            FROM session_user su
+            JOIN golf_session gs ON su.session_id = gs.session_id
+            WHERE su.user_id = %s AND su.status = 'Pending' AND su.session_user_id = %s
+        """, (user_id, target_id))
+
+    chosen_session = cur.fetchone()
+
+    if chosen_session:
         # 1. Add base session price
-        total_session_price += pending_session["session_price"]
+        total_session_price += chosen_session["session_price"]
 
         # 2. Add bucket fees (if any)
-        if pending_session["buckets"] and pending_session["buckets"] > 0:
-            total_session_price += Decimal(pending_session["buckets"] * 300)
-
+        if chosen_session["buckets"] and chosen_session["buckets"] > 0:
+            total_session_price += Decimal(chosen_session["buckets"] * 300)
         # 3. Add staff fees (if any)
         
         # if coach
-        if pending_session["coach_id"]:
-            cur.execute("SELECT service_fee FROM staff WHERE staff_id = %s", (pending_session["coach_id"],))
+        if chosen_session["coach_id"]:
+            cur.execute("SELECT service_fee FROM staff WHERE staff_id = %s", (chosen_session["coach_id"],))
             staff_fee = cur.fetchone()
             if staff_fee:
                 total_staff_price += staff_fee["service_fee"]
         
         # if caddie
-        if pending_session["caddie_id"]:
-            cur.execute("SELECT service_fee FROM staff WHERE staff_id = %s", (pending_session["caddie_id"],))
+        if chosen_session["caddie_id"]:
+            cur.execute("SELECT service_fee FROM staff WHERE staff_id = %s", (chosen_session["caddie_id"],))
             staff_fee = cur.fetchone()
             if staff_fee:
                 total_staff_price += staff_fee["service_fee"]
@@ -227,7 +218,7 @@ def process_membership_payment(cur, user_id):
     # TODO cart_id and session_user_id might need to be extracted
 
 # TODO: Jerry
-def process_cart_payment(cur, user_id, checkout_context, mysql, payment_method_enum):
+def process_cart_payment(cur, user_id, payment_method_enum):
 
     cur.execute("SELECT * FROM cart WHERE status = 'active' AND user_id = %s", (user_id,))
     old_cart = cur.fetchone()
@@ -252,8 +243,6 @@ def process_cart_payment(cur, user_id, checkout_context, mysql, payment_method_e
                     item["type"], 
                     item["price"]
                     ))
-        
-    mysql.connection.commit()
 
     cur.execute("""
                 INSERT INTO payment (total_price, date_paid, payment_method, status, discount_applied, user_id, cart_id, session_user_id) 
@@ -262,7 +251,7 @@ def process_cart_payment(cur, user_id, checkout_context, mysql, payment_method_e
     
 
 # TODO: Ronald
-def process_golf_session_payment(cur, user_id, checkout_context):
+def process_golf_session_payment(cur, user_id, checkout_context, payment_method_enum):
     # get all pending sessions for the user
     cur.execute("""
         SELECT su.session_user_id

@@ -27,10 +27,18 @@
                             at {{ p_session.session_time_formatted }}
                         </div>
 
-                        <form action="/cancel_booking" method="POST" class="m-0">
-                            <input type="hidden" name="session_user_id" value="{{ p_session.session_user_id }}">
-                            <button type="submit" class="btn btn-outline-danger btn-sm">Cancel</button>
-                        </form>
+                        <div class="d-flex gap-2">
+        
+                            <form action="/checkout_specific" method="POST" class="m-0">
+                                <input type="hidden" name="session_user_id" value="{{ p_session.session_user_id }}">
+                                <button type="submit" class="btn btn-success btn-sm">Pay</button>
+                            </form>
+
+                            <form action="/cancel_booking" method="POST" class="m-0">
+                                <input type="hidden" name="session_user_id" value="{{ p_session.session_user_id }}">
+                                <button type="submit" class="btn btn-outline-danger btn-sm">Cancel</button>
+                            </form>
+                        </div>
                     </li>
                     {% endfor %}
 
@@ -41,7 +49,7 @@
             </div>
             {% endif %}
             <div>
-                <p class="d-inline-block homepage-welcome lead mb-0">Welcome, {{ user.first_name }}.</p>
+                <p class="d-inline-block homepage-welcome lead mb-0">Welcome, {{ user }}.</p>
                 <h1 class="display-4"><em>STEP INTO A</em> <strong>GOLFER'S PARADISE AT TEETRACK</strong></h1>
             </div>
         </div>
