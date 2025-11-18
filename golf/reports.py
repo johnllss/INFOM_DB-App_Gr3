@@ -1,6 +1,69 @@
 # TODO: Ronald, Sales Performance Report
-def get_sales_performance_report(mysql):
-  pass
+def get_yearly_sales_report(mysql):
+    query = """
+    SELECT 
+        year,
+        SUM(session_items) AS session_items,
+        SUM(membership_subscriptions) AS membership_subscriptions,
+        COUNT(session_user_id_for_count) AS total_sessions,
+        COUNT(DISTINCT user_id) AS unique_customers,
+        SUM(renewal_rate) AS renewal_rate
+    FROM (
+        SELECT
+            YEAR(gs.session_schedule) AS year,
+            gs.session_price AS session_items,
+            0 AS membership_subscriptions,
+            su.session_user_id AS session_user_id_for_count,
+            su.user_id AS user_id,
+            0 AS renewal_rate
+        FROM
+            golf_session gs
+        JOIN
+            session_user su ON gs.session_id = su.session_id
+        WHERE
+            su.status = 'Confirmed' AND gs.status IN ('Finished', 'Ongoing')
+        UNION ALL
+        SELECT
+            YEAR(p.date_paid) AS year,
+            c.total_price AS session_items,
+            0 AS membership_subscriptions,
+            NULL AS session_user_id_for_count,
+            p.user_id AS user_id,
+            0 AS renewal_rate
+        FROM
+            payment p
+        JOIN
+            cart c ON p.cart_id = c.cart_id
+        WHERE
+            c.status = 'archived'
+        UNION ALL
+        SELECT
+            YEAR(p.date_paid) AS year,
+            0 AS session_items,
+            p.total_price AS membership_subscriptions,
+            NULL AS session_user_id_for_count,
+            p.user_id AS user_id,
+            1 AS renewal_rate
+        FROM
+            payment p
+        WHERE
+            p.status = 'Paid' and p.cart_id IS NULL and p.session_user_id IS NULL
+    ) AS combined_revenue
+    GROUP BY
+        year
+    ORDER BY
+        year DESC;
+    """
+    try:
+        cur = mysql.connection.cursor()
+        cur.execute(query)
+        report = cur.fetchall()
+        cur.close()
+        return report
+    except Exception as e:
+        print(f"Error fetching yearly sales report: {e}")
+        return []
+    pass
 
 # TODO: Gab, Staff Performance Report
 def get_yearly_staff_report(mysql):

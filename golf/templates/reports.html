@@ -7,6 +7,32 @@
 {% block main %}
     <div class="container">
         <h1 class="my-5"><strong>Admin Reports</strong></h1>
+        
+        <h2 class="mt-5">Yearly Sales Performance</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Year</th>
+                    <th>Revenue from sessions and items</th>
+                    <th>Revenue from membership subscriptions</th>
+                    <th>Renewal rate</th>
+                    <th>Total Sessions</th>
+                    <th>Total Unique Customers</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in yearly_sales_report %}
+                <tr>
+                    <td>{{ row.year }}</td>
+                    <td>{{ row.session_items }}</td>
+                    <td>{{ row.membership_subscriptions }}</td>
+                    <td>{{ row.renewal_rate }}</td>
+                    <td>{{ row.total_sessions }}</td>
+                    <td>{{ row.unique_customers }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
 
         <h2 class="mt-5">Yearly Staff Performance</h2>
         <table>

@@ -568,8 +568,8 @@ def fairway():
                 cur.execute("""
                     SELECT *
                     FROM session_user su
-                    LEFT JOIN user u ON su.user_id = u.user_id
-                    LEFT JOIN golf_session gs ON su.session_id = gs.session_id AND gs.session_schedule = %s
+                    JOIN user u ON su.user_id = u.user_id
+                    JOIN golf_session gs ON su.session_id = gs.session_id AND gs.session_schedule = %s
                     WHERE su.user_id = %s AND su.status != 'Cancelled'
                 """, (datetime_str, session["user_id"]))
                 if cur.rowcount > 0:
@@ -680,8 +680,8 @@ def range():
                 cur.execute("""
                     SELECT *
                     FROM session_user su
-                    LEFT JOIN user u ON su.user_id = u.user_id
-                    LEFT JOIN golf_session gs ON su.session_id = gs.session_id AND gs.session_schedule = %s
+                    JOIN user u ON su.user_id = u.user_id
+                    JOIN golf_session gs ON su.session_id = gs.session_id AND gs.session_schedule = %s
                     WHERE su.user_id = %s AND su.status != 'Cancelled'
                 """, (datetime_str, session["user_id"]))
                 if cur.rowcount > 0:
@@ -843,7 +843,7 @@ def report():
 # FETCHING REPORTS SECTION
     # Only admins can reach this point
     # TODO: Ronald, Sales Performance Report
-
+    yearly_sales_report = reports.get_yearly_sales_report(mysql)
     # TODO: Gab, Staff Performance Report
     yearly_staff_report = reports.get_yearly_staff_report(mysql)
     quarterly_staff_report = reports.get_quarterly_staff_report(mysql)
@@ -854,7 +854,7 @@ def report():
     customer_report = reports.get_customer_value_report(mysql, admin_selected_year)
 
     return render_template("reports.html", 
-                           # sales_report=sales_report,
+                           yearly_sales_report=yearly_sales_report,
                            yearly_staff_report=yearly_staff_report, 
                            quarterly_staff_report=quarterly_staff_report, #inventory_report=inventory_report, 
                            customer_report=customer_report, selectable_years=selectable_years, admin_selected_year=admin_selected_year)
