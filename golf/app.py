@@ -132,7 +132,8 @@ def login():
 def homepage():
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cur.execute("SELECT first_name FROM user WHERE user_id = %s", (session["user_id"],))
-    first_name = cur.fetchone()
+    first_name_obj = cur.fetchone()
+    first_name = first_name_obj["first_name"] if first_name_obj else "User"
 
     cur.execute("""
         SELECT
@@ -345,7 +346,8 @@ def add_to_cart():
     mysql.connection.commit()
 
     cursor.execute("SELECT COUNT(item_id) AS numm FROM item WHERE cart_id = %s", (cart_id,))
-    new_count = cursor.fetchone()['numm']
+    count_result = cursor.fetchone()
+    new_count = count_result['numm'] if count_result else 0
 
     cursor.close()
     return jsonify({"status": "success", "cart_count": new_count})
@@ -380,7 +382,8 @@ def update_cart_quantity():
     mysql.connection.commit()
 
     cursor.execute("SELECT price * quantity AS total FROM item WHERE item_id = %s", (item_id,))
-    sub_total = cursor.fetchone()["total"]
+    sub_total_result = cursor.fetchone()
+    sub_total = sub_total_result["total"] if sub_total_result else 0
 
     cursor.close()
     return jsonify({"success": True, "cart-total": items_total, "sub-tot": sub_total})
@@ -524,8 +527,6 @@ def fairway():
             return apology(str(e), 400)
         finally:
             cur.close()
-            return redirect("/checkout")
-    else:
         cur.close()
         return render_template("fairway.html", coach=coach, caddie=caddie)
 
@@ -605,7 +606,6 @@ def range():
             return apology(str(e), 400)
         finally:
             cur.close()
-            return redirect("/checkout")
     else:
         cur.close()
         return render_template("range.html", coach=coach)
