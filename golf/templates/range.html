@@ -25,7 +25,7 @@
                     
                     <div class="col-md-3">
                         <label for="time-selector" class="form-label fw-bold">Time</label>
-                        <select class="form-select" name="booking-time">
+                        <select id="time-selector" class="form-select" name="booking-time">
                             <option value="07:00">7:00 AM</option>
                             <option value="09:00">9:00 AM</option>
                             <option value="11:00">11:00 AM</option>
@@ -36,9 +36,7 @@
                     </div>
 
                     <div class="col-md-3">
-                        <p class="h5 fw-bold text-success mb-0 pb-1">
-                            Available
-                        </p>
+                        <p class="h5 fw-bold mb-0" id="session-status"></p>
                     </div>
                 </div>
 
@@ -123,10 +121,17 @@
 </div> 
 
 <script>
+
     const decreaseBtn = document.getElementById('decreaseBtn');
-    const displayAmount = document.getElementById('bucketsAmount');
     const increaseBtn = document.getElementById('increaseBtn');
+    const displayAmount = document.getElementById('bucketsAmount');
     const realAmount = document.getElementById('hiddenValue');
+    
+    const dateSelector = document.getElementById('date-selector');
+    const timeSelector = document.getElementById('time-selector');
+    const sessionStatusText = document.getElementById('session-status');
+    const coachSelector = document.getElementById('coach-selector');
+
 
     function updateQuantity(addend) {
         let curVal = parseInt(displayAmount.textContent); 
@@ -138,70 +143,137 @@
         
         displayAmount.textContent = newVal;
         realAmount.value = newVal; 
+
+        updateTotal();
     }
 
-    // Attach listeners
-    increaseBtn.addEventListener('click', function() {
-        updateQuantity(1); // Increase by 1
-        getPrice()
-    });
+    async function checkSession() {
+        const dateVal = dateSelector.value;
+        const timeVal = timeSelector.value;
 
-    decreaseBtn.addEventListener('click', function() {
-        updateQuantity(-1); // Decrease by 1
-        getPrice()
-    });
+        if (!dateVal || !timeVal) {
+            sessionStatusText.textContent = "Select Date";
+            sessionStatusText.className = "h5 fw-bold text-muted mb-0 pb-1";
+            return;
+        }
 
-    function checkStaff(selectorId, availabilityId, textID) {
+        sessionStatusText.textContent = "Checking...";
+        sessionStatusText.className = "h5 fw-bold text-muted mb-0 pb-1";
+
+        try {
+            const url = `/api/check_session_status?date=${dateVal}&time=${timeVal}&type=Driving Range`;
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (data.status === 'Available') {
+                sessionStatusText.textContent = 'Available';
+                sessionStatusText.className = 'h5 fw-bold text-success mb-0 pb-1';
+            } else {
+                sessionStatusText.textContent = data.status;
+                sessionStatusText.className = 'h5 fw-bold text-danger mb-0 pb-1';
+            }
+        } catch (error) {
+            console.error(error);
+            sessionStatusText.textContent = "Error";
+        }
+    }
+
+    async function checkStaff(selectorId, availabilityId, textID) {
         const selector = document.getElementById(selectorId);
         const availabilityText = document.getElementById(availabilityId);
         const staffPriceText = document.getElementById(textID);
+        
         const selectedOption = selector.options[selector.selectedIndex];
         const selectedStaffId = selectedOption.value;
-        const staffPrice = parseFloat(selectedOption.getAttribute('fee'));
+        const staffPrice = parseFloat(selectedOption.getAttribute('fee')) || 0;
 
         if (selectedStaffId === "0") {
             availabilityText.textContent = ""; 
             staffPriceText.textContent = `₱0`;
-            return 0; 
+            updateTotal(); 
+            return; 
         }
 
-        // read the string
-        const staffStatus = selectedOption.dataset.status;
+        // B. Validate Date/Time
+        const dateVal = dateSelector.value;
+        const timeVal = timeSelector.value;
 
-        // updated selected element
-        if (staffStatus === 'Available') {
-            availabilityText.textContent = 'Available';
-            availabilityText.className = 'h5 fw-bold text-success mb-0';
-        } else {
-            availabilityText.textContent = 'Occupied'; 
-            availabilityText.className = 'h5 fw-bold text-danger mb-0';
+        if (!dateVal || !timeVal) {
+            availabilityText.textContent = "Select Date & Time";
+            availabilityText.className = "h5 fw-bold text-muted mb-0";
+            staffPriceText.textContent = `₱${staffPrice}`;
+            updateTotal();
+            return;
         }
 
-        staffPriceText.textContent = `₱${staffPrice}`; 
-        return staffPrice;
+        // Call API
+        availabilityText.textContent = "Checking...";
+        availabilityText.className = "h5 fw-bold text-muted mb-0";
+
+        try {
+            const datetime = `${dateVal} ${timeVal}:00`;
+            const response = await fetch(`/api/check_staff_availability?staff_id=${selectedStaffId}&datetime=${datetime}`);
+            const data = await response.json();
+
+            if (data.available) {
+                availabilityText.textContent = 'Available';
+                availabilityText.className = 'h5 fw-bold text-success mb-0';
+            } else {
+                availabilityText.textContent = 'Occupied'; 
+                availabilityText.className = 'h5 fw-bold text-danger mb-0';
+            }
+        } catch (error) {
+            console.error(error);
+            availabilityText.textContent = 'Error'; 
+            availabilityText.className = "h5 fw-bold text-danger mb-0";
+        }
+
+        staffPriceText.textContent = `₱${staffPrice}`;
+        updateTotal();
     }
 
-    // 3. ATTACH EVENT LISTENERS
-    const coachSelector = document.getElementById('coach-selector');
-    const caddieSelector = document.getElementById('caddie-selector');
-
-    coachSelector.addEventListener('change', () => {
-        checkStaff('coach-selector', 'coach-availability', 'coach-price');
-        getPrice()
-    });
-
-    // 4. RUN ON PAGE LOAD
-    checkStaff('coach-selector', 'coach-availability', 'coach-price');
-
-    function getPrice() {
+    function updateTotal() {
         const totalText = document.getElementById('total-price');
         const bucketsText = document.getElementById("buckets-price");
-        const currentQuantity = parseInt(document.getElementById('hiddenValue').value);
-        coachPrice = checkStaff('coach-selector', 'coach-availability', 'coach-price');
-        bucketsPrice = currentQuantity * 300;
-        total = bucketsPrice + coachPrice + 1000;
+
+        const currentQuantity = parseInt(realAmount.value) || 1;
+        
+        // (300 per bucket)
+        const bucketsPrice = currentQuantity * 300;
+        
+        const coachOption = coachSelector.options[coachSelector.selectedIndex];
+        const coachPrice = (coachOption.value !== "0") ? parseFloat(coachOption.getAttribute('fee')) : 0;
+
+        const total = bucketsPrice + coachPrice + 1000;
+
         bucketsText.textContent = `₱${bucketsPrice}`;
         totalText.textContent = `₱${total}`;
     }
+
+    // EVENT LISTENERS
+
+    // Buckets Buttons
+    increaseBtn.addEventListener('click', () => updateQuantity(1));
+    decreaseBtn.addEventListener('click', () => updateQuantity(-1));
+
+    // If Staff changes, check availability
+    coachSelector.addEventListener('change', () => {
+        checkStaff('coach-selector', 'coach-availability', 'coach-price');
+        checkSession();
+    });
+
+    // Date/Time Changes (Re-check staff availability)
+    dateSelector.addEventListener('change', () => {
+        checkStaff('coach-selector', 'coach-availability', 'coach-price');
+        checkSession();
+    });
+    timeSelector.addEventListener('change', () => {
+        checkStaff('coach-selector', 'coach-availability', 'coach-price');
+        checkSession();
+    });
+
+    updateTotal(); 
+    checkSession();
+    checkStaff('coach-selector', 'coach-availability', 'coach-price');
 </script>
 {% endblock %}

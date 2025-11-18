@@ -420,11 +420,83 @@ def cart():
 def booking():
     return render_template("booking.html")
 
+@app.route("/api/check_session_status")
+@login_required
+def check_session_status():
+    """
+    Checks if the Golf Session (Date + Time + Type) is Fully Booked.
+    """
+    date = request.args.get("date")
+    time = request.args.get("time")
+    session_type = request.args.get("type") # 'Fairway' or 'Driving Range'
+    holes = request.args.get("holes")
+
+    if not date or not time or not session_type:
+        return {"status": "Error"}
+
+    datetime_str = f"{date} {time}:00"
+    
+    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+
+    if session_type == 'Fairway':
+        cur.execute("""
+            SELECT status FROM golf_session 
+            WHERE session_schedule = %s AND type = %s AND holes = %s
+        """, (datetime_str, session_type, holes))
+    elif session_type == 'Driving Range':
+        cur.execute("""
+            SELECT status FROM golf_session 
+            WHERE session_schedule = %s AND type = %s
+        """, (datetime_str, session_type))
+    
+    result = cur.fetchone()
+    cur.close()
+
+    if not result:
+        return {"status": "Available"}
+
+    return {"status": result["status"]}
+
+@app.route("/api/check_staff_availability")
+@login_required
+def check_staff_availability():
+    staff_id = request.args.get("staff_id")
+    datetime_str = request.args.get("datetime")
+
+    if not staff_id or not datetime_str:
+        return {"available": False, "error": "Missing data"}, 400
+
+    if staff_id == "0":
+        return {"available": True}
+
+    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    
+    # Check specific time slot load
+    cur.execute("""
+        SELECT 
+            s.max_clients, 
+            COUNT(su.session_id) AS current_bookings
+        FROM staff s
+        LEFT JOIN session_user su ON s.staff_id = su.coach_id OR s.staff_id = su.caddie_id
+        LEFT JOIN golf_session gs ON su.session_id = gs.session_id AND gs.session_schedule = %s
+        WHERE s.staff_id = %s
+        GROUP BY s.staff_id, s.max_clients
+    """, (datetime_str, staff_id))
+    
+    staff_status = cur.fetchone()
+    cur.close()
+
+    if not staff_status:
+        return {"available": False}
+
+    if staff_status["current_bookings"] >= staff_status["max_clients"]:
+        return {"available": False}
+    
+    return {"available": True}
+
 @app.route("/booking/fairway", methods=["GET", "POST"])
 @login_required
 def fairway():
-    process.update_finished_staff_status(mysql)
-
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
 
     cur.execute("SELECT * FROM staff WHERE role = 'Coach'")
@@ -474,51 +546,39 @@ def fairway():
             # Staff Handling
             book_coach = request.form.get("booking-coach")
             if book_coach != "0":
-                # Is the coach available for this time?
                 cur.execute("""
-                    SELECT s.status, s.max_clients, COUNT(su.session_id) AS current_bookings
+                    SELECT s.max_clients, COUNT(su.session_id) AS current_bookings
                     FROM staff s
                     LEFT JOIN session_user su ON s.staff_id = su.coach_id
                     LEFT JOIN golf_session gs ON su.session_id = gs.session_id AND gs.session_schedule = %s
                     WHERE s.staff_id = %s
-                    GROUP BY s.staff_id, s.status, s.max_clients
+                    GROUP BY s.staff_id, s.max_clients
                 """, (datetime_str, book_coach))
                 coach_status = cur.fetchone()
 
-                if not coach_status or coach_status["status"] == 'Occupied' or coach_status["current_bookings"] >= coach_status["max_clients"]:
+                if coach_status["current_bookings"] >= coach_status["max_clients"]:
                     return apology("This coach is fully booked for this time slot.", 400)
                 
-                # If available, book them
                 cur.execute("UPDATE session_user SET coach_id = %s WHERE user_id = %s AND session_id = %s",
                             (book_coach, session["user_id"], session_id))
 
-                # Did this booking fill their slot? If yes, set them to Occupied
-                if (coach_status["current_bookings"] + 1) >= coach_status["max_clients"]:
-                    cur.execute("UPDATE staff SET status = 'Occupied' WHERE staff_id = %s", (book_coach,))
-
             book_caddie = request.form.get("booking-caddie")
             if book_caddie != "0":
-                # Is the caddie available?
                 cur.execute("""
-                    SELECT s.status, s.max_clients, COUNT(su.session_id) AS current_bookings
+                    SELECT s.max_clients, COUNT(su.session_id) AS current_bookings
                     FROM staff s
                     LEFT JOIN session_user su ON s.staff_id = su.caddie_id
                     LEFT JOIN golf_session gs ON su.session_id = gs.session_id AND gs.session_schedule = %s
                     WHERE s.staff_id = %s
-                    GROUP BY s.staff_id, s.status, s.max_clients
+                    GROUP BY s.staff_id, s.max_clients
                 """, (datetime_str, book_caddie))
                 caddie_status = cur.fetchone()
 
-                if not caddie_status or caddie_status["status"] == 'Occupied' or caddie_status["current_bookings"] >= caddie_status["max_clients"]:
+                if caddie_status["current_bookings"] >= caddie_status["max_clients"]:
                     return apology("This caddie is fully booked for this time slot.", 400)
-                    
-                # If available, book them
+
                 cur.execute("UPDATE session_user SET caddie_id = %s WHERE user_id = %s AND session_id = %s",
                             (book_caddie, session["user_id"], session_id))
-                
-                # Did this booking fill their slot? If yes, set them to Occupied
-                if (caddie_status["current_bookings"] + 1) >= caddie_status["max_clients"]:
-                    cur.execute("UPDATE staff SET status = 'Occupied' WHERE staff_id = %s", (book_caddie,))
 
             mysql.connection.commit()
             return redirect("/checkout")
@@ -533,8 +593,6 @@ def fairway():
 @app.route("/booking/range", methods=["GET", "POST"])
 @login_required
 def range():
-    process.update_finished_staff_status(mysql)
-
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
 
     cur.execute("SELECT * FROM staff WHERE role = 'Coach'")
@@ -577,27 +635,21 @@ def range():
             # Staff Handling
             book_coach = request.form.get("booking-coach")
             if book_coach != "0":
-                    # Is the coach available for this time?
-                    cur.execute("""
-                        SELECT s.status, s.max_clients, COUNT(su.session_id) AS current_bookings
-                        FROM staff s
-                        LEFT JOIN session_user su ON s.staff_id = su.coach_id
-                        LEFT JOIN golf_session gs ON su.session_id = gs.session_id AND gs.session_schedule = %s
-                        WHERE s.staff_id = %s
-                        GROUP BY s.staff_id, s.status, s.max_clients
-                    """, (datetime_str, book_coach))
-                    coach_status = cur.fetchone()
+                cur.execute("""
+                    SELECT s.max_clients, COUNT(su.session_id) AS current_bookings
+                    FROM staff s
+                    LEFT JOIN session_user su ON s.staff_id = su.coach_id
+                    LEFT JOIN golf_session gs ON su.session_id = gs.session_id AND gs.session_schedule = %s
+                    WHERE s.staff_id = %s
+                    GROUP BY s.staff_id, s.max_clients
+                """, (datetime_str, book_coach))
+                coach_status = cur.fetchone()
 
-                    if not coach_status or coach_status["status"] == 'Occupied' or coach_status["current_bookings"] >= coach_status["max_clients"]:
-                        return apology("This coach is fully booked for this time slot.", 400)
-                    
-                    # If available, book them
-                    cur.execute("UPDATE session_user SET coach_id = %s WHERE user_id = %s AND session_id = %s",
-                                (book_coach, session["user_id"], session_id))
-
-                    # Did this booking fill their slot? If yes, set them to Occupied
-                    if (coach_status["current_bookings"] + 1) >= coach_status["max_clients"]:
-                        cur.execute("UPDATE staff SET status = 'Occupied' WHERE staff_id = %s", (book_coach,))
+                if coach_status["current_bookings"] >= coach_status["max_clients"]:
+                    return apology("This coach is fully booked for this time slot.", 400)
+                
+                cur.execute("UPDATE session_user SET coach_id = %s WHERE user_id = %s AND session_id = %s",
+                            (book_coach, session["user_id"], session_id))
 
             mysql.connection.commit()
             return redirect("/checkout")

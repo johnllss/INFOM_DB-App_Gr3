@@ -285,29 +285,6 @@ def update_loyalty_points(cur, user_id, checkout_context):
 
     return
 
-def update_finished_staff_status(mysql):
-    """
-    Finds 'Occupied' staff linked to 'Finished' sessions
-    and sets them back to 'Available'.
-    """
-    try:
-        cur = mysql.connection.cursor()
-        cur.execute("""
-            UPDATE staff s
-            JOIN session_user su ON s.staff_id = su.coach_id OR s.staff_id = su.caddie_id
-            JOIN golf_session gs ON su.session_id = gs.session_id
-            SET s.status = 'Available'
-            WHERE s.status = 'Occupied' AND gs.status = 'Finished'
-        """)
-
-        mysql.connection.commit()
-        
-    except Exception as e:
-        mysql.connection.rollback()
-        print(f"Error updating staff status: {e}")
-    finally:
-        cur.close()
-
 def cleanup_checkout_session(session):
     for key in ["checkout_details", "loyalty_points_to_use"]:
         session.pop(key, None)

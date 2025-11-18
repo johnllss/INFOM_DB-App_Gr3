@@ -25,7 +25,7 @@
                     
                     <div class="col-md-3">
                         <label for="time-selector" class="form-label fw-bold">Time</label>
-                        <select class="form-select" name="booking-time">
+                        <select id="time-selector" name="booking-time" class="form-select">
                             <option value="07:00">7:00 AM</option>
                             <option value="09:00">9:00 AM</option>
                             <option value="11:00">11:00 AM</option>
@@ -45,9 +45,7 @@
                     </div>
 
                     <div class="col-md-3">
-                        <p class="h5 fw-bold text-success mb-0 pb-1">
-                            Available
-                        </p>
+                        <p class="h5 fw-bold mb-0" id="session-status"></p>
                     </div>
                 </div>
 
@@ -61,7 +59,7 @@
                                 <select class="form-select" name="booking-coach" id="coach-selector">
                                     <option value="0">No Coach</option>
                                     {% for co in coach %}
-                                        <option value="{{ co.staff_id }}" data-status="{{ co.status }}" fee="{{ co.service_fee }}">
+                                        <option value="{{ co.staff_id }}" fee="{{ co.service_fee }}">
                                             {{ co.name }}
                                         </option>
                                     {% endfor %}
@@ -82,7 +80,7 @@
                                 <select class="form-select" name="booking-caddie" id="caddie-selector">
                                     <option value="0">No Caddie</option>
                                     {% for ca in caddie %}
-                                        <option value="{{ ca.staff_id }}" data-status="{{ ca.status }}" fee="{{ ca.service_fee }}">
+                                        <option value="{{ ca.staff_id }}" fee="{{ ca.service_fee }}">
                                             {{ ca.name }}
                                         </option>
                                     {% endfor %}
@@ -134,49 +132,99 @@
 </div> 
 
 <script>
-    function checkStaff(selectorId, availabilityId, textID) {
+    const dateSelector = document.getElementById('date-selector');
+    const timeSelector = document.getElementById('time-selector');
+    const sessionStatusText = document.getElementById('session-status');
+    const coachSelector = document.getElementById('coach-selector');
+    const caddieSelector = document.getElementById('caddie-selector');
+    const holeSelector = document.getElementById('hole-selector');
+
+    async function checkSession() {
+        const dateVal = dateSelector.value;
+        const timeVal = timeSelector.value;
+        const holeVal = holeSelector.value;
+
+        if (!dateVal || !timeVal) {
+            sessionStatusText.textContent = "Select Date";
+            sessionStatusText.className = "h5 fw-bold text-muted mb-0 pb-1";
+            return;
+        }
+
+        sessionStatusText.textContent = "Checking...";
+        sessionStatusText.className = "h5 fw-bold text-muted mb-0 pb-1";
+
+        try {
+            const url = `/api/check_session_status?date=${dateVal}&time=${timeVal}&type=Fairway&holes=${holeVal}`;
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (data.status === 'Available') {
+                sessionStatusText.textContent = 'Available';
+                sessionStatusText.className = 'h5 fw-bold text-success mb-0 pb-1';
+            } else {
+                sessionStatusText.textContent = data.status;
+                sessionStatusText.className = 'h5 fw-bold text-danger mb-0 pb-1';
+            }
+        } catch (error) {
+            console.error(error);
+            sessionStatusText.textContent = "Error";
+        }
+    }
+
+    async function checkStaff(selectorId, availabilityId, textID) {
         const selector = document.getElementById(selectorId);
         const availabilityText = document.getElementById(availabilityId);
         const staffPriceText = document.getElementById(textID);
+        
         const selectedOption = selector.options[selector.selectedIndex];
         const selectedStaffId = selectedOption.value;
-        const staffPrice = parseFloat(selectedOption.getAttribute('fee'));
+        const staffPrice = parseFloat(selectedOption.getAttribute('fee')) || 0;
 
         if (selectedStaffId === "0") {
             availabilityText.textContent = ""; 
             staffPriceText.textContent = `₱0`;
-            return 0; 
+            updateTotal();
+            return; 
         }
 
-        // read the string
-        const staffStatus = selectedOption.dataset.status;
+        const dateVal = dateSelector.value;
+        const timeVal = timeSelector.value;
 
-        // updated selected element
-        if (staffStatus === 'Available') {
-            availabilityText.textContent = 'Available';
-            availabilityText.className = 'h5 fw-bold text-success mb-0';
-        } else {
-            availabilityText.textContent = 'Occupied'; 
-            availabilityText.className = 'h5 fw-bold text-danger mb-0';
+        if (!dateVal || !timeVal) {
+            availabilityText.textContent = "Select Date & Time";
+            availabilityText.className = "h5 fw-bold text-muted mb-0";
+            staffPriceText.textContent = `₱${staffPrice}`;
+            updateTotal();
+            return;
         }
 
-        staffPriceText.textContent = `₱${staffPrice}`; 
-        return staffPrice;
-    }
+        // Call the API
+        availabilityText.textContent = "Checking..."; // Loading state
+        availabilityText.className = "h5 fw-bold text-muted mb-0";
 
-    function getPrice() {
-        const totalText = document.getElementById('total-price');
-        const coachPrice = checkStaff('coach-selector', 'coach-availability', 'coach-text');
-        const caddiePrice = checkStaff('caddie-selector', 'caddie-availability', 'caddie-text');
-        const roundPrice = getHolePrice();
-        const total = roundPrice + caddiePrice + coachPrice;
-        totalText.textContent = `₱${total}`;
+        try {
+            const datetime = `${dateVal} ${timeVal}:00`;
+            const response = await fetch(`/api/check_staff_availability?staff_id=${selectedStaffId}&datetime=${datetime}`);
+            const data = await response.json();
+
+            if (data.available) {
+                availabilityText.textContent = 'Available';
+                availabilityText.className = 'h5 fw-bold text-success mb-0';
+            } else {
+                availabilityText.textContent = 'Occupied'; 
+                availabilityText.className = 'h5 fw-bold text-danger mb-0';
+            }
+        } catch (error) {
+            console.error(error);
+            availabilityText.textContent = 'Error'; 
+        }
+        staffPriceText.textContent = `₱${staffPrice}`;
+        updateTotal();
     }
 
     function getHolePrice() {
-        const selector = document.getElementById('hole-selector');
+        const selectedHole = holeSelector.value;
         const holeText = document.getElementById('hole-text');
-        const selectedHole = selector.value;
         let holePrice = 0;
 
         if (selectedHole === 'FULL 18') {
@@ -184,34 +232,58 @@
         } else {
             holePrice = 3000;
         }
-
+        
         holeText.textContent = `₱${holePrice}`;
         return holePrice;
     }
 
-    // 3. ATTACH EVENT LISTENERS
-    const coachSelector = document.getElementById('coach-selector');
-    const caddieSelector = document.getElementById('caddie-selector');
-    const holeSelector = document.getElementById('hole-selector');
-    
+    function updateTotal() {
+        const totalText = document.getElementById('total-price');
+        
 
+        const roundPrice = getHolePrice();
+
+        const coachOption = coachSelector.options[coachSelector.selectedIndex];
+        const coachPrice = (coachOption.value !== "0") ? parseFloat(coachOption.getAttribute('fee')) : 0;
+
+        const caddieOption = caddieSelector.options[caddieSelector.selectedIndex];
+        const caddiePrice = (caddieOption.value !== "0") ? parseFloat(caddieOption.getAttribute('fee')) : 0;
+
+        const total = roundPrice + coachPrice + caddiePrice;
+        totalText.textContent = `₱${total}`;
+    }
+
+    // EVENT LISTENERS
+    
+    // If Hole changes, just update total
     holeSelector.addEventListener('change', () => {
-        getHolePrice();
-        getPrice()
+        updateTotal();
+        checkSession();
     });
+
+    // If Staff changes, check availability
     coachSelector.addEventListener('change', () => {
         checkStaff('coach-selector', 'coach-availability', 'coach-text');
-        getPrice()
     });
     caddieSelector.addEventListener('change', () => {
         checkStaff('caddie-selector', 'caddie-availability', 'caddie-text');
-        getPrice()
     });
 
+    // If Date/Time changes, re-check BOTH staff members
+    dateSelector.addEventListener('change', () => {
+        checkStaff('coach-selector', 'coach-availability', 'coach-text');
+        checkStaff('caddie-selector', 'caddie-availability', 'caddie-text');
+        checkSession();
+    });
+    timeSelector.addEventListener('change', () => {
+        checkStaff('coach-selector', 'coach-availability', 'coach-text');
+        checkStaff('caddie-selector', 'caddie-availability', 'caddie-text');
+        checkSession();
+    });
 
-    // 4. RUN ON PAGE LOAD
+    updateTotal();
+    checkSession();
     checkStaff('coach-selector', 'coach-availability', 'coach-text');
     checkStaff('caddie-selector', 'caddie-availability', 'caddie-text');
-
 </script>
 {% endblock %}
