@@ -47,43 +47,43 @@ def load_checkout_context(cur, user_id):
             WHERE su.session_user_id = %s AND su.user_id = %s AND su.status = 'Pending'
         """, (session_user_id, user_id))
 
-    pending_session = cur.fetchone()
+        pending_session = cur.fetchone()
 
-    if pending_session:
-        session_total = Decimal('0.0')
-        staff_total = Decimal('0.0')
+        if pending_session:
+            session_total = Decimal('0.0')
+            staff_total = Decimal('0.0')
 
-        # 1. Add base session price
-        session_total += pending_session["session_price"]
+            # 1. Add base session price
+            session_total += pending_session["session_price"]
 
-        # 2. Add bucket fees (if any)
-        if pending_session["buckets"] and pending_session["buckets"] > 0:
-            session_total += Decimal(pending_session["buckets"] * 300)
+            # 2. Add bucket fees (if any)
+            if pending_session["buckets"] and pending_session["buckets"] > 0:
+                session_total += Decimal(pending_session["buckets"] * 300)
 
-        # 3. Add staff fees (if any)
-        # if coach
-        if pending_session["coach_id"]:
-            cur.execute("SELECT service_fee FROM staff WHERE staff_id = %s", (pending_session["coach_id"],))
-            staff_fee = cur.fetchone()
-            if staff_fee:
-                total_staff_price += staff_fee["service_fee"]
-        
-        # if caddie
-        if pending_session["caddie_id"]:
-            cur.execute("SELECT service_fee FROM staff WHERE staff_id = %s", (pending_session["caddie_id"],))
-            staff_fee = cur.fetchone()
-            if staff_fee:
-                total_staff_price += staff_fee["service_fee"]
-        
-        total_session_price += session_total
-        total_staff_price += staff_total
+            # 3. Add staff fees (if any)
+            # if coach
+            if pending_session["coach_id"]:
+                cur.execute("SELECT service_fee FROM staff WHERE staff_id = %s", (pending_session["coach_id"],))
+                staff_fee = cur.fetchone()
+                if staff_fee:
+                    total_staff_price += staff_fee["service_fee"]
+            
+            # if caddie
+            if pending_session["caddie_id"]:
+                cur.execute("SELECT service_fee FROM staff WHERE staff_id = %s", (pending_session["caddie_id"],))
+                staff_fee = cur.fetchone()
+                if staff_fee:
+                    total_staff_price += staff_fee["service_fee"]
+            
+            total_session_price += session_total
+            total_staff_price += staff_total
 
-        # store session details for optional display
-        checkout_context["session_details"].append({
-            "type": pending_session["session_type"],
-            "schedule": pending_session["session_schedule"],
-            "price": session_total + staff_total
-        })
+            # store session details for optional display
+            checkout_context["session_details"].append({
+                "type": pending_session["session_type"],
+                "schedule": pending_session["session_schedule"],
+                "price": session_total + staff_total
+            })
 
     elif checkout_details.get("type") == "all_sessions":
         # checkout All pending sessions
@@ -95,42 +95,42 @@ def load_checkout_context(cur, user_id):
             WHERE su.user_id = %s AND su.status = 'Pending'
         """, (user_id,))
 
-    all_pending_sessions = cur.fetchall()
+        all_pending_sessions = cur.fetchall()
 
-    for pending_session in all_pending_sessions:
-        session_total = Decimal('0.0')
-        staff_total = Decimal('0.0')
+        for pending_session in all_pending_sessions:
+            session_total = Decimal('0.0')
+            staff_total = Decimal('0.0')
 
-        # 1. Add base session price
-        session_total += pending_session["session_price"]
+            # 1. Add base session price
+            session_total += pending_session["session_price"]
 
-        if pending_session["buckets"] and pending_session["buckets"] > 0:
-            session_total += Decimal(pending_session["buckets"] * 300)
+            if pending_session["buckets"] and pending_session["buckets"] > 0:
+                session_total += Decimal(pending_session["buckets"] * 300)
 
-        # 3. Add staff fees (if any)
-        # if coach
-        if pending_session["coach_id"]:
-            cur.execute("SELECT service_fee FROM staff WHERE staff_id = %s", (pending_session["coach_id"],))
-            staff_fee = cur.fetchone()
-            if staff_fee:
-                total_staff_price += staff_fee["service_fee"]
-        
-        # if caddie
-        if pending_session["caddie_id"]:
-            cur.execute("SELECT service_fee FROM staff WHERE staff_id = %s", (pending_session["caddie_id"],))
-            staff_fee = cur.fetchone()
-            if staff_fee:
-                total_staff_price += staff_fee["service_fee"]
+            # 3. Add staff fees (if any)
+            # if coach
+            if pending_session["coach_id"]:
+                cur.execute("SELECT service_fee FROM staff WHERE staff_id = %s", (pending_session["coach_id"],))
+                staff_fee = cur.fetchone()
+                if staff_fee:
+                    total_staff_price += staff_fee["service_fee"]
+            
+            # if caddie
+            if pending_session["caddie_id"]:
+                cur.execute("SELECT service_fee FROM staff WHERE staff_id = %s", (pending_session["caddie_id"],))
+                staff_fee = cur.fetchone()
+                if staff_fee:
+                    total_staff_price += staff_fee["service_fee"]
 
-        total_session_price += session_total
-        total_staff_price += staff_total
+            total_session_price += session_total
+            total_staff_price += staff_total
 
-    # store session details for optional display
-    checkout_context["session_details"].append({
-        "type": pending_session["session_type"],
-        "schedule": pending_session["session_schedule"],
-        "price": session_total + staff_total
-    })
+            # store session details for optional display
+            checkout_context["session_details"].append({
+                "type": pending_session["session_type"],
+                "schedule": pending_session["session_schedule"],
+                "price": session_total + staff_total
+            })
 
     checkout_context["session_fee"] = total_session_price + total_staff_price
     
