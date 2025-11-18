@@ -14,61 +14,123 @@ def load_checkout_context(cur, user_id):
         "loyalty_discount": 0,
         "subtotal": 0,
         "total": 0,
+        "session_details": [] # for storing individual session details
     }
+    total_session_price = Decimal('0.0')
+    total_staff_price = Decimal('0.0')
 
     # MEMBERSHIP HANDLING
-    if "checkout_details" in session and session["checkout_details"]["type"] == "membership":
-        checkout_context["membership_fee"] = session["checkout_details"]["total_price"]
+    checkout_details = session.get("checkout_details", {})
+    if checkout_details.get("type") == "membership":
+        checkout_context["membership_fee"] = checkout_details["total_price"]
 
     # CART HANDLING
     cur.execute("""
             SELECT total_price
             FROM cart
-            WHERE user_id = %s
+            WHERE user_id = %s AND status = 'active'
         """, (user_id,))
     cart = cur.fetchone()
 
     if cart and cart["total_price"]:
         checkout_context["cart_fee"] = cart["total_price"]
 
-    # SESSION HANDLING
-    total_session_price = Decimal('0.0')
-    total_staff_price = Decimal('0.0')
+    # SESSION HANDLING - this is based on checkout_details
+    if checkout_details.get("type") == "single_session":
+        session_user_id = checkout_details.get("session_user_id")
 
-    target_id = session.get("single_checkout_id")
-    if target_id:
         cur.execute("""
             SELECT 
-                su.session_user_id, su.coach_id, su.caddie_id, su.buckets, gs.session_price
+                su.session_user_id, su.coach_id, su.caddie_id, su.buckets, gs.session_price, gs.type as session_type, gs.holes, gs.session_schedule
             FROM session_user su
             JOIN golf_session gs ON su.session_id = gs.session_id
-            WHERE su.user_id = %s AND su.status = 'Pending' AND su.session_user_id = %s
-        """, (user_id, target_id))
+            WHERE su.session_user_id = %s AND su.user_id = %s AND su.status = 'Pending'
+        """, (session_user_id, user_id))
 
-    chosen_session = cur.fetchone()
+    pending_session = cur.fetchone()
 
-    if chosen_session:
+    if pending_session:
+        session_total = Decimal('0.0')
+        staff_total = Decimal('0.0')
+
         # 1. Add base session price
-        total_session_price += chosen_session["session_price"]
+        session_total += pending_session["session_price"]
 
         # 2. Add bucket fees (if any)
-        if chosen_session["buckets"] and chosen_session["buckets"] > 0:
-            total_session_price += Decimal(chosen_session["buckets"] * 300)
+        if pending_session["buckets"] and pending_session["buckets"] > 0:
+            session_total += Decimal(pending_session["buckets"] * 300)
+
         # 3. Add staff fees (if any)
-        
         # if coach
-        if chosen_session["coach_id"]:
-            cur.execute("SELECT service_fee FROM staff WHERE staff_id = %s", (chosen_session["coach_id"],))
+        if pending_session["coach_id"]:
+            cur.execute("SELECT service_fee FROM staff WHERE staff_id = %s", (pending_session["coach_id"],))
             staff_fee = cur.fetchone()
             if staff_fee:
                 total_staff_price += staff_fee["service_fee"]
         
         # if caddie
-        if chosen_session["caddie_id"]:
-            cur.execute("SELECT service_fee FROM staff WHERE staff_id = %s", (chosen_session["caddie_id"],))
+        if pending_session["caddie_id"]:
+            cur.execute("SELECT service_fee FROM staff WHERE staff_id = %s", (pending_session["caddie_id"],))
             staff_fee = cur.fetchone()
             if staff_fee:
                 total_staff_price += staff_fee["service_fee"]
+        
+        total_session_price += session_total
+        total_staff_price += staff_total
+
+        # store session details for optional display
+        checkout_context["session_details"].append({
+            "type": pending_session["session_type"],
+            "schedule": pending_session["session_schedule"],
+            "price": session_total + staff_total
+        })
+
+    elif checkout_details.get("type") == "all_sessions":
+        # checkout All pending sessions
+        cur.execute("""
+            SELECT 
+                su.session_user_id, su.coach_id, su.caddie_id, su.buckets, gs.session_price, gs.type as session_type, gs.holes, gs.session_schedule
+            FROM session_user su
+            JOIN golf_session gs ON su.session_id = gs.session_id
+            WHERE su.user_id = %s AND su.status = 'Pending'
+        """, (user_id,))
+
+    all_pending_sessions = cur.fetchall()
+
+    for pending_session in all_pending_sessions:
+        session_total = Decimal('0.0')
+        staff_total = Decimal('0.0')
+
+        # 1. Add base session price
+        session_total += pending_session["session_price"]
+
+        if pending_session["buckets"] and pending_session["buckets"] > 0:
+            session_total += Decimal(pending_session["buckets"] * 300)
+
+        # 3. Add staff fees (if any)
+        # if coach
+        if pending_session["coach_id"]:
+            cur.execute("SELECT service_fee FROM staff WHERE staff_id = %s", (pending_session["coach_id"],))
+            staff_fee = cur.fetchone()
+            if staff_fee:
+                total_staff_price += staff_fee["service_fee"]
+        
+        # if caddie
+        if pending_session["caddie_id"]:
+            cur.execute("SELECT service_fee FROM staff WHERE staff_id = %s", (pending_session["caddie_id"],))
+            staff_fee = cur.fetchone()
+            if staff_fee:
+                total_staff_price += staff_fee["service_fee"]
+
+        total_session_price += session_total
+        total_staff_price += staff_total
+
+    # store session details for optional display
+    checkout_context["session_details"].append({
+        "type": pending_session["session_type"],
+        "schedule": pending_session["session_schedule"],
+        "price": session_total + staff_total
+    })
 
     checkout_context["session_fee"] = total_session_price + total_staff_price
     
@@ -252,28 +314,95 @@ def process_cart_payment(cur, user_id, payment_method_enum):
 
 # TODO: Ronald
 def process_golf_session_payment(cur, user_id, checkout_context, payment_method_enum):
-    # get all pending sessions for the user
-    cur.execute("""
-        SELECT su.session_user_id
-        FROM session_user su
-        WHERE su.user_id = %s AND su.status = 'Pending'
-    """, (user_id,))
-    pending_sessions = cur.fetchall()
-    for pending_session in pending_sessions:
-        session_user_id = pending_session["session_user_id"]
+    checkout_details = session.get("checkout_details", {})
 
-        # create payment record for each pending session
-        cur.execute("""
-            INSERT INTO payment (total_price, date_paid, payment_method, status, discount_applied, user_id, cart_id, session_user_id) 
-            VALUES (%s, NOW(), %s, 'Paid', 0.00, %s, NULL, %s)
-        """, (checkout_context["session_fee"], payment_method_enum, user_id, session_user_id))
+    if checkout_details.get("type") == "single_session":
+        # process only ONE session checkout
+        session_user_id = checkout_details.get("session_user_id")
 
-        # update session_user status to 'Paid'
+        # update session_user status to 'Confirmed'
         cur.execute("""
             UPDATE session_user 
-            SET status = 'Paid' 
-            WHERE session_user_id = %s
-        """, (session_user_id,))
+            SET status = 'Confirmed' 
+            WHERE session_user_id = %s AND user_id = %s
+        """, (session_user_id, user_id))
+
+        cur.execute("""
+            INSERT INTO payment(total_price, date_paid, payment_method, status, discount_applied, user_id, cart_id, session_user_id)
+            VALUES (%s, NOW(), %s, 'Paid', %s, %s, NULL, %s)
+        """, (checkout_context["session_fee"], payment_method_enum, checkout_context["discount_amount"], user_id, session_user_id))
+
+    elif checkout_details.get("type") == "all_sessions":
+        # get all pending session_user_id's
+        cur.execute("""
+            SELECT su.session_user_id, su.coach_id, su.caddie_id, su.buckets, gs.session_price
+            FROM session_user su
+            JOIN golf_session gs ON su.session_id = gs.session_id
+            WHERE su.user_id = %s AND su.status = 'Pending'
+        """, (user_id,))
+        all_pending_sessions = cur.fetchall()
+
+        if not all_pending_sessions:
+            return
+        
+        # total for discount distribution
+        total_before_discount = checkout_context["session_fee"] + checkout_context["discount_amount"]
+
+        # process each session individually
+        for pending_session in all_pending_sessions:
+            session_user_id = pending_session["session_user_id"]
+
+            # calculate individual session price
+            individual_price = Decimal('0.0')
+            individual_staff_price = Decimal('0.0')
+
+            # base session price
+            individual_price += pending_session["session_price"]
+
+            # bucket fees
+            if pending_session["buckets"] and pending_session["buckets"] > 0:
+                individual_price += Decimal(pending_session["buckets"] * 300)
+
+            # coach fee
+            if pending_session["coach_id"]:
+                cur.execute("SELECT service_fee FROM staff WHERE staff_id = %s", (pending_session["coach_id"],))
+                staff_fee = cur.fetchone()
+                if staff_fee:
+                    individual_staff_price += staff_fee["service_fee"]
+
+            # caddie fee
+            if pending_session["caddie_id"]:
+                cur.execute("SELECT service_fee FROM staff WHERE staff_id = %s", (pending_session["caddie_id"],))
+                staff_fee = cur.fetchone()
+                if staff_fee:
+                    individual_staff_price += staff_fee["service_fee"]
+
+            # total for this session
+            individual_total = individual_price + individual_staff_price
+
+            # calculate proportional discount for this session
+            if total_before_discount > 0:
+                discount_ratio = individual_total / total_before_discount
+                individual_discount = checkout_context["discount_amount"] * discount_ratio
+            else:
+                individual_discount = Decimal('0.0')
+
+            # final price after discount
+            final_individual_price = individual_total - individual_discount
+
+            # update all sessions to Confirmed
+            cur.execute("""
+                UPDATE session_user 
+                SET status = 'Confirmed' 
+                WHERE session_user_id = %s
+            """, (session_user_id,))
+
+            # create individual payment record for this session
+            cur.execute("""
+                INSERT INTO payment (total_price, date_paid, payment_method, status, discount_applied, user_id, cart_id, session_user_id)
+                VALUES (%s, NOW(), %s, 'Paid', %s, %s, NULL, %s)
+            """, (final_individual_price, payment_method_enum, individual_discount, user_id, session_user_id))
+
     return
 
 def update_loyalty_points(cur, user_id, checkout_context):
