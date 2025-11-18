@@ -762,15 +762,12 @@ def checkout():
             
             if checkout_context["membership_fee"] != 0:
                 process.process_membership_payment(cur, user_id)
-                pass
 
             if checkout_context["cart_fee"] != 0:
-                process.process_cart_payment(cur, user_id, checkout_context)
-                pass
+                process.process_cart_payment(cur, user_id, checkout_context, mysql, payment_method_enum)
 
             if checkout_context["session_fee"] != 0:
                 process.process_golf_session_payment(cur, user_id, checkout_context)
-                pass
 
             process.update_loyalty_points(cur, user_id, checkout_context)
 
