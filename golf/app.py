@@ -503,7 +503,7 @@ def range():
 
         # Create golf_session entry
         cur.execute("SELECT * FROM golf_session WHERE session_schedule = %s AND type = %s", 
-                    (datetime, "Range"))
+                    (datetime, "Driving Range"))
         
         if cur.rowcount == 0:
             cur.execute("INSERT INTO golf_session (type, session_schedule, people_limit, status, session_price) VALUES (%s, %s, %s, %s, %s)",
