@@ -4,6 +4,8 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from flask_mysqldb import MySQL
 import MySQLdb.cursors
 from helpers import apology, login_required, admin_required, php
+import pytz
+from datetime import datetime
 
 import helpers
 import process
@@ -512,10 +514,6 @@ def fairway():
             time = request.form.get("booking-time")
             datetime_str = f"{date} {time}:00"
             hole = request.form.get("booking-hole")
-            
-            # Validate that the datetime is in the future
-            import pytz
-            from datetime import datetime
 
             # Define the target timezone (Asia/Manila)
             PHILIPPINES_TZ = pytz.timezone('Asia/Manila')
@@ -523,8 +521,6 @@ def fairway():
             booking_datetime_aware = PHILIPPINES_TZ.localize(booking_datetime)
             now_aware = datetime.now(PHILIPPINES_TZ)
 
-            print(booking_datetime_aware)
-            print(now_aware)
             if booking_datetime_aware <= now_aware:
                 cur.close()
                 return apology("Date/Time invalid!", 400)
@@ -611,7 +607,7 @@ def range():
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
 
     cur.execute("SELECT * FROM staff WHERE role = 'Coach'")
-    coach = cur.fetchall()  
+    coach = cur.fetchall()
 
     if request.method == "POST":
         try:
@@ -620,6 +616,16 @@ def range():
             time = request.form.get("booking-time")
             datetime_str = f"{date} {time}:00"
             bucket = request.form.get("buckets-value")
+
+            # Define the target timezone (Asia/Manila)
+            PHILIPPINES_TZ = pytz.timezone('Asia/Manila')
+            booking_datetime = datetime.strptime(datetime_str, "%Y-%m-%d %H:%M:%S")
+            booking_datetime_aware = PHILIPPINES_TZ.localize(booking_datetime)
+            now_aware = datetime.now(PHILIPPINES_TZ)
+
+            if booking_datetime_aware <= now_aware:
+                cur.close()
+                return apology("Date/Time invalid!", 400)
 
             # Create golf_session entry
             cur.execute("SELECT * FROM golf_session WHERE session_schedule = %s AND type = %s", 
