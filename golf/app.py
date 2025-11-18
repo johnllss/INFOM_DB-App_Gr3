@@ -35,7 +35,6 @@ def after_request(response):
     response.headers["Pragma"] = "no-cache"
     return response
 
-# ROUTING
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
@@ -421,6 +420,8 @@ def booking():
 @app.route("/booking/fairway", methods=["GET", "POST"])
 @login_required
 def fairway():
+    process.update_finished_staff_status(mysql)
+
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
 
     cur.execute("SELECT * FROM staff WHERE role = 'Coach'")
@@ -430,72 +431,100 @@ def fairway():
     caddie = cur.fetchall()
 
     if request.method == "POST":
-        # Booking Handling
-        date = request.form.get("booking-date")
-        time = request.form.get("booking-time")
-        datetime = f"{date} {time}:00"
-        hole = request.form.get("booking-hole")
+        try:
+            # Booking Handling
+            date = request.form.get("booking-date")
+            time = request.form.get("booking-time")
+            datetime_str = f"{date} {time}:00"
+            hole = request.form.get("booking-hole")
 
-        # Create golf_session entry
-        cur.execute("SELECT * FROM golf_session WHERE session_schedule = %s AND type = %s AND holes = %s", 
-                    (datetime, "Fairway", hole))
-        
-        if cur.rowcount == 0:
-            if hole == 'Full 18':
-                price = 5000
-            else:
-                price = 3000
-            cur.execute("INSERT INTO golf_session (type, session_schedule, holes, people_limit, status, session_price) VALUES (%s, %s, %s, %s, %s, %s)",
-                        ('Fairway', datetime, hole, 8, "Available", price))
-            session_id = cur.lastrowid
-        else:
-            golf_session = cur.fetchone()
-            if golf_session['status'] == 'Fully Booked':
-                cur.close()
-                return apology("Selected session is fully booked. Please choose another schedule.", 400)
-            session_id = golf_session['session_id']
-
-        # Insert session_user entry
-        cur.execute("INSERT INTO session_user (user_id, session_id, status) VALUES (%s, %s, %s)",
-                    (session['user_id'], session_id, "Pending"))
-
-        # Check if session is now fully booked
-        cur.execute("SELECT COUNT(*) as count FROM session_user WHERE session_id = %s", (session_id,))
-        user_count = cur.fetchone()
-        if user_count['count'] >= 8:
-            cur.execute("UPDATE golf_session SET status = %s WHERE session_id = %s",
-                        ("Fully Booked", session_id))
-
-        # Staff Handling
-        book_coach = request.form.get("booking-coach")
-        if book_coach != "0":
-            cur.execute("SELECT status FROM staff WHERE staff_id = %s", (book_coach,))
-            status_coach = cur.fetchone()
-
-            if not status_coach or status_coach["status"] == 'Occupied':
-                cur.close()
-                return apology("Coach is not available for booking.", 400)
+            # Create golf_session entry
+            cur.execute("SELECT * FROM golf_session WHERE session_schedule = %s AND type = %s AND holes = %s", 
+                        (datetime_str, "Fairway", hole))
             
-            cur.execute("""UPDATE session_user SET coach_id = %s
-                          WHERE user_id = %s AND session_id = %s""",
-                        (book_coach, session["user_id"], session_id))
+            if cur.rowcount == 0:
+                if hole == 'Full 18':
+                    price = 5000
+                else:
+                    price = 3000
+                cur.execute("INSERT INTO golf_session (type, session_schedule, holes, people_limit, status, session_price) VALUES (%s, %s, %s, %s, %s, %s)",
+                            ('Fairway', datetime_str, hole, 8, "Available", price))
+                session_id = cur.lastrowid
+            else:
+                golf_session = cur.fetchone()
+                if golf_session['status'] == 'Fully Booked':
+                    cur.close()
+                    return apology("Selected session is fully booked. Please choose another schedule.", 400)
+                session_id = golf_session['session_id']
 
-        book_caddie = request.form.get("booking-caddie")
-        if book_caddie != "0":
-            cur.execute("SELECT status FROM staff WHERE staff_id = %s", (book_caddie,))
-            status_caddie = cur.fetchone()
+            # Insert session_user entry
+            cur.execute("INSERT INTO session_user (user_id, session_id, status) VALUES (%s, %s, %s)",
+                        (session['user_id'], session_id, "Pending"))
 
-            if not status_caddie or status_caddie["status"] == 'Occupied':
-                cur.close()
-                return apology("Caddie is not available for booking.", 400)
+            # Check if session is now fully booked
+            cur.execute("SELECT COUNT(*) as count FROM session_user WHERE session_id = %s", (session_id,))
+            user_count = cur.fetchone()
+            if user_count['count'] >= 8:
+                cur.execute("UPDATE golf_session SET status = %s WHERE session_id = %s",
+                            ("Fully Booked", session_id))
 
-            cur.execute("""UPDATE session_user SET caddie_id = %s
-                          WHERE user_id = %s AND session_id = %s""",
-                        (book_caddie, session["user_id"], session_id))
+            # Staff Handling
+            book_coach = request.form.get("booking-coach")
+            if book_coach != "0":
+                # Is the coach available for this time?
+                cur.execute("""
+                    SELECT s.status, s.max_clients, COUNT(su.session_id) AS current_bookings
+                    FROM staff s
+                    LEFT JOIN session_user su ON s.staff_id = su.coach_id
+                    LEFT JOIN golf_session gs ON su.session_id = gs.session_id AND gs.session_schedule = %s
+                    WHERE s.staff_id = %s
+                    GROUP BY s.staff_id, s.status, s.max_clients
+                """, (datetime_str, book_coach))
+                coach_status = cur.fetchone()
 
-        mysql.connection.commit()
-        cur.close()
-        return redirect("/checkout")
+                if not coach_status or coach_status["status"] == 'Occupied' or coach_status["current_bookings"] >= coach_status["max_clients"]:
+                    raise apology("This coach is fully booked for this time slot.", 400)
+                
+                # If available, book them
+                cur.execute("UPDATE session_user SET coach_id = %s WHERE user_id = %s AND session_id = %s",
+                            (book_coach, session["user_id"], session_id))
+
+                # Did this booking fill their slot? If yes, set them to Occupied
+                if (coach_status["current_bookings"] + 1) >= coach_status["max_clients"]:
+                    cur.execute("UPDATE staff SET status = 'Occupied' WHERE staff_id = %s", (book_coach,))
+
+            book_caddie = request.form.get("booking-caddie")
+            if book_caddie != "0":
+                # Is the caddie available?
+                cur.execute("""
+                    SELECT s.status, s.max_clients, COUNT(su.session_id) AS current_bookings
+                    FROM staff s
+                    LEFT JOIN session_user su ON s.staff_id = su.caddie_id
+                    LEFT JOIN golf_session gs ON su.session_id = gs.session_id AND gs.session_schedule = %s
+                    WHERE s.staff_id = %s
+                    GROUP BY s.staff_id, s.status, s.max_clients
+                """, (datetime_str, book_caddie))
+                caddie_status = cur.fetchone()
+
+                if not caddie_status or caddie_status["status"] == 'Occupied' or caddie_status["current_bookings"] >= caddie_status["max_clients"]:
+                    raise apology("This caddie is fully booked for this time slot.", 400)
+                    
+                # If available, book them
+                cur.execute("UPDATE session_user SET caddie_id = %s WHERE user_id = %s AND session_id = %s",
+                            (book_caddie, session["user_id"], session_id))
+                
+                # Did this booking fill their slot? If yes, set them to Occupied
+                if (caddie_status["current_bookings"] + 1) >= caddie_status["max_clients"]:
+                    cur.execute("UPDATE staff SET status = 'Occupied' WHERE staff_id = %s", (book_caddie,))
+
+            mysql.connection.commit()
+            return redirect("/checkout")
+        except Exception as e:
+            mysql.connection.rollback()
+            return apology(str(e), 400)
+        finally:
+            cur.close()
+            return redirect("/checkout")
     else:
         cur.close()
         return render_template("fairway.html", coach=coach, caddie=caddie)
@@ -503,66 +532,84 @@ def fairway():
 @app.route("/booking/range", methods=["GET", "POST"])
 @login_required
 def range():
+    process.update_finished_staff_status(mysql)
+
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
 
     cur.execute("SELECT * FROM staff WHERE role = 'Coach'")
     coach = cur.fetchall()  
 
     if request.method == "POST":
-        # Booking Handling
-        date = request.form.get("booking-date")
-        time = request.form.get("booking-time")
-        datetime = f"{date} {time}:00"
-        bucket = request.form.get("buckets-value")
+        try:
+            # Booking Handling
+            date = request.form.get("booking-date")
+            time = request.form.get("booking-time")
+            datetime_str = f"{date} {time}:00"
+            bucket = request.form.get("buckets-value")
 
-        # Create golf_session entry
-        cur.execute("SELECT * FROM golf_session WHERE session_schedule = %s AND type = %s", 
-                    (datetime, "Driving Range"))
-        
-        if cur.rowcount == 0:
-            cur.execute("INSERT INTO golf_session (type, session_schedule, people_limit, status, session_price) VALUES (%s, %s, %s, %s, %s)",
-                        ('Driving Range', datetime, 25, "Available", 1000))
-            session_id = cur.lastrowid
-        else:
-            golf_session = cur.fetchone()
-            if golf_session['status'] == 'Fully Booked':
-                cur.close()
-                return apology("Selected session is fully booked. Please choose another schedule.", 400)
-            session_id = golf_session['session_id']
-
-        # Insert session_user entry
-        cur.execute("INSERT INTO session_user (user_id, session_id, status, buckets) VALUES (%s, %s, %s, %s)",
-                    (session['user_id'], session_id, "Pending", bucket))
-
-        # Check if session is now fully booked
-        cur.execute("SELECT COUNT(*) as count FROM session_user WHERE session_id = %s", (session_id,))
-        user_count = cur.fetchone()
-        if user_count['count'] >= 25:
-            cur.execute("UPDATE golf_session SET status = %s WHERE session_id = %s",
-                        ("Fully Booked", session_id))
-
-        # Staff Handling
-        book_coach = request.form.get("booking-coach")
-        if book_coach != "0":
-            cur.execute("SELECT status FROM staff WHERE staff_id = %s", (book_coach,))
-            status_coach = cur.fetchone()
-
-            if not status_coach or status_coach["status"] == 'Occupied':
-                cur.close()
-                return apology("Coach is not available for booking.", 400)
+            # Create golf_session entry
+            cur.execute("SELECT * FROM golf_session WHERE session_schedule = %s AND type = %s", 
+                        (datetime_str, "Driving Range"))
             
-            cur.execute("""UPDATE session_user SET coach_id = %s
-                          WHERE user_id = %s AND session_id = %s""",
-                        (book_coach, session["user_id"], session_id))
+            if cur.rowcount == 0:
+                cur.execute("INSERT INTO golf_session (type, session_schedule, people_limit, status, session_price) VALUES (%s, %s, %s, %s, %s)",
+                            ('Driving Range', datetime_str, 25, "Available", 1000))
+                session_id = cur.lastrowid
+            else:
+                golf_session = cur.fetchone()
+                if golf_session['status'] == 'Fully Booked':
+                    cur.close()
+                    return apology("Selected session is fully booked. Please choose another schedule.", 400)
+                session_id = golf_session['session_id']
 
-        mysql.connection.commit()
-        cur.close()
-        return redirect("/checkout")
+            # Insert session_user entry
+            cur.execute("INSERT INTO session_user (user_id, session_id, status, buckets) VALUES (%s, %s, %s, %s)",
+                        (session['user_id'], session_id, "Pending", bucket))
+
+            # Check if session is now fully booked
+            cur.execute("SELECT COUNT(*) as count FROM session_user WHERE session_id = %s", (session_id,))
+            user_count = cur.fetchone()
+            if user_count['count'] >= 25:
+                cur.execute("UPDATE golf_session SET status = %s WHERE session_id = %s",
+                            ("Fully Booked", session_id))
+
+            # Staff Handling
+            book_coach = request.form.get("booking-coach")
+            if book_coach != "0":
+                    # Is the coach available for this time?
+                    cur.execute("""
+                        SELECT s.status, s.max_clients, COUNT(su.session_id) AS current_bookings
+                        FROM staff s
+                        LEFT JOIN session_user su ON s.staff_id = su.coach_id
+                        LEFT JOIN golf_session gs ON su.session_id = gs.session_id AND gs.session_schedule = %s
+                        WHERE s.staff_id = %s
+                        GROUP BY s.staff_id, s.status, s.max_clients
+                    """, (datetime_str, book_coach))
+                    coach_status = cur.fetchone()
+
+                    if not coach_status or coach_status["status"] == 'Occupied' or coach_status["current_bookings"] >= coach_status["max_clients"]:
+                        raise apology("This coach is fully booked for this time slot.", 400)
+                    
+                    # If available, book them
+                    cur.execute("UPDATE session_user SET coach_id = %s WHERE user_id = %s AND session_id = %s",
+                                (book_coach, session["user_id"], session_id))
+
+                    # Did this booking fill their slot? If yes, set them to Occupied
+                    if (coach_status["current_bookings"] + 1) >= coach_status["max_clients"]:
+                        cur.execute("UPDATE staff SET status = 'Occupied' WHERE staff_id = %s", (book_coach,))
+
+            mysql.connection.commit()
+            return redirect("/checkout")
+        except Exception as e:
+            mysql.connection.rollback()
+            return apology(str(e), 400)
+        finally:
+            cur.close()
+            return redirect("/checkout")
     else:
         cur.close()
         return render_template("range.html", coach=coach)
 
-# Account
 @app.route("/account")
 @login_required
 def account():
