@@ -859,13 +859,29 @@ def report():
                            quarterly_staff_report=quarterly_staff_report, #inventory_report=inventory_report, 
                            customer_report=customer_report, selectable_years=selectable_years, admin_selected_year=admin_selected_year)
 
-@app.route("/checkout_specific", methods=["POST"])
+@app.route("/checkout_session", methods=["POST"])
 @login_required
-def checkout_specific():
+def checkout_session():
     session_user_id = request.form.get("session_user_id")
 
-    session["single_checkout_id"] = session_user_id
-    
+    if not session_user_id:
+        return apology("Invalid session.", 400)
+
+    # store session_user_id in session for checkout
+    session["checkout_details"] = {
+        "type": "single_session",
+        "session_user_id": session_user_id
+    }
+
+    return redirect("/checkout")
+
+@app.route("/checkout_all_sessions", methods=["POST"])
+@login_required
+def checkout_all_sessions():
+    session["checkout_details"] = {
+        "type": "all_sessions"
+    }
+
     return redirect("/checkout")
 
 @app.route("/checkout", methods=["GET", "POST"])
