@@ -466,6 +466,14 @@ def check_session_status():
     result = cur.fetchone()
     cur.close()
 
+    PHILIPPINES_TZ = pytz.timezone('Asia/Manila')
+    booking_datetime = datetime.strptime(datetime_str, "%Y-%m-%d %H:%M:%S")
+    booking_datetime_aware = PHILIPPINES_TZ.localize(booking_datetime)
+    now_aware = datetime.now(PHILIPPINES_TZ)
+
+    if booking_datetime_aware <= now_aware:
+        return {"status": "Unavailable"}
+
     if not result:
         return {"status": "Available"}
 
@@ -556,6 +564,18 @@ def fairway():
                     cur.close()
                     return apology("Selected session is fully booked. Please choose another schedule.", 400)
                 session_id = golf_session['session_id']
+                print("You made it here")
+                cur.execute("""
+                    SELECT *
+                    FROM session_user su
+                    LEFT JOIN user u ON su.user_id = u.user_id
+                    LEFT JOIN golf_session gs ON su.session_id = gs.session_id AND gs.session_schedule = %s
+                    WHERE su.user_id = %s AND su.status != 'Cancelled'
+                """, (datetime_str, session["user_id"]))
+                if cur.rowcount > 0:
+                    cur.close()
+                    return apology("You have already booked a session at this time slot.", 400)
+
 
             # Insert session_user entry
             cur.execute("INSERT INTO session_user (user_id, session_id, status) VALUES (%s, %s, %s)",
@@ -649,12 +669,24 @@ def range():
             if cur.rowcount == 0:
                 cur.execute("INSERT INTO golf_session (type, session_schedule, people_limit, status, session_price) VALUES (%s, %s, %s, %s, %s)",
                             ('Driving Range', datetime_str, 25, "Available", 1000))
+                session_id = cur.lastrowid
             else:
                 golf_session = cur.fetchone()
                 if golf_session['status'] == 'Fully Booked':
                     cur.close()
                     return apology("Selected session is fully booked. Please choose another schedule.", 400)
                 session_id = golf_session['session_id']
+                print("You made it here")
+                cur.execute("""
+                    SELECT *
+                    FROM session_user su
+                    LEFT JOIN user u ON su.user_id = u.user_id
+                    LEFT JOIN golf_session gs ON su.session_id = gs.session_id AND gs.session_schedule = %s
+                    WHERE su.user_id = %s AND su.status != 'Cancelled'
+                """, (datetime_str, session["user_id"]))
+                if cur.rowcount > 0:
+                    cur.close()
+                    return apology("You have already booked a session at this time slot.", 400)
 
             # Insert session_user entry
             cur.execute("INSERT INTO session_user (user_id, session_id, status, buckets) VALUES (%s, %s, %s, %s)",
