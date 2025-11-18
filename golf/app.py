@@ -483,7 +483,7 @@ def fairway():
                 coach_status = cur.fetchone()
 
                 if not coach_status or coach_status["status"] == 'Occupied' or coach_status["current_bookings"] >= coach_status["max_clients"]:
-                    raise apology("This coach is fully booked for this time slot.", 400)
+                    return apology("This coach is fully booked for this time slot.", 400)
                 
                 # If available, book them
                 cur.execute("UPDATE session_user SET coach_id = %s WHERE user_id = %s AND session_id = %s",
@@ -507,7 +507,7 @@ def fairway():
                 caddie_status = cur.fetchone()
 
                 if not caddie_status or caddie_status["status"] == 'Occupied' or caddie_status["current_bookings"] >= caddie_status["max_clients"]:
-                    raise apology("This caddie is fully booked for this time slot.", 400)
+                    return apology("This caddie is fully booked for this time slot.", 400)
                     
                 # If available, book them
                 cur.execute("UPDATE session_user SET caddie_id = %s WHERE user_id = %s AND session_id = %s",
@@ -588,7 +588,7 @@ def range():
                     coach_status = cur.fetchone()
 
                     if not coach_status or coach_status["status"] == 'Occupied' or coach_status["current_bookings"] >= coach_status["max_clients"]:
-                        raise apology("This coach is fully booked for this time slot.", 400)
+                        return apology("This coach is fully booked for this time slot.", 400)
                     
                     # If available, book them
                     cur.execute("UPDATE session_user SET coach_id = %s WHERE user_id = %s AND session_id = %s",
@@ -671,7 +671,7 @@ def account():
     cur.execute("""
                 SELECT gs.holes as holes, su.score_fairway as score, DATE_FORMAT(gs.session_schedule, '%%Y-%%m-%%d') as date_played
                 FROM session_user su JOIN golf_session gs ON su.session_id = gs.session_id
-                WHERE user_id = %s AND gs.type = 'Fairway' AND su.score_fairway IS NOT NULL
+                WHERE su.user_id = %s AND gs.type = 'Fairway' AND su.score_fairway IS NOT NULL
                 ORDER BY gs.session_schedule DESC
                 LIMIT 4
                 """,
@@ -683,7 +683,7 @@ def account():
     cur.execute("""
                 SELECT su.buckets as buckets, su.longest_range as longest_range, DATE_FORMAT(gs.session_schedule, '%%Y-%%m-%%d') as date_played
                 FROM session_user su JOIN golf_session gs ON su.session_id = gs.session_id
-                WHERE user_id = %s AND gs.type = 'Driving Range' AND su.longest_range IS NOT NULL
+                WHERE su.user_id = %s AND gs.type = 'Driving Range' AND su.longest_range IS NOT NULL
                 ORDER BY gs.session_schedule DESC
                 LIMIT 4
                 """,
