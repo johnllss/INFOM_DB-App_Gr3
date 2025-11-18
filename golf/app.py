@@ -527,8 +527,8 @@ def fairway():
             return apology(str(e), 400)
         finally:
             cur.close()
-        cur.close()
-        return render_template("fairway.html", coach=coach, caddie=caddie)
+            
+    return render_template("fairway.html", coach=coach, caddie=caddie)
 
 @app.route("/booking/range", methods=["GET", "POST"])
 @login_required
