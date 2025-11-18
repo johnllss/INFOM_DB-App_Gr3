@@ -14,6 +14,11 @@
     <div class="row py-2 px-5">
         
         <div class="col-md-5 d-flex flex-column justify-content-end pb-1">
+            <div>
+                <p class="d-inline-block homepage-welcome lead mb-0">Welcome, {{ user }}.</p>
+                <h1 class="display-4"><em>STEP INTO A</em> <strong>GOLFER'S PARADISE AT TEETRACK</strong></h1>
+            </div>
+
             {% if pending_sessions %}
             <div class="pending-box p-3 mb-3">
                 <h5 class="fw-bold">Your Pending Bookings</h5>
@@ -48,10 +53,6 @@
                 </a>
             </div>
             {% endif %}
-            <div>
-                <p class="d-inline-block homepage-welcome lead mb-0">Welcome, {{ user }}.</p>
-                <h1 class="display-4"><em>STEP INTO A</em> <strong>GOLFER'S PARADISE AT TEETRACK</strong></h1>
-            </div>
         </div>
 
         <div class="col-md-7 mt-3 d-flex flex-column align-items-end justify-content-center">
