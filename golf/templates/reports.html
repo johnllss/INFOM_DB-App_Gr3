@@ -52,5 +52,48 @@
             </tbody>
         </table>
 
+
+
+        <h2 class="mt-5">Customer Value Report</h2>
+        <form method="GET" action="/reports" class="mb-3">
+            <label for="year-selector" class="form-label fw-bold">Select Year:</label>
+            <select name="year" id="year-selector" class="form-select" onchange="this.form.submit()"> <!--onchange here automatically submits the form once the selected changes-->
+                {% for year in selectable_years %}
+                    <option value="{{ year }}" {% if year == admin_selected_year %}selected{% endif %}>{{ year }}</option>
+                {% endfor %}
+            </select>
+        </form>
+
+        <table class="mb-5">
+            <thead>
+                <tr>
+                    <th>Customer Name</th>
+                    <th>Email</th>
+                    <th>Membership Tier</th>
+                    <th>Sessions Attended</th>
+                    <th>Total Spent (₱)</th>
+                    <th>Loyalty Points</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if customer_report %}
+                    {% for row in customer_report %}
+                    <tr>
+                        <td>{{ row.full_name }}</td>
+                        <td>{{ row.email }}</td>
+                        <td>{{ row.membership_tier }}</td>
+                        <td>{{ row.total_sessions_attended }}</td>
+                        <td>{{ "%.2f"|format(row.total_amount_spent) }}</td>
+                        <td>{{ row.accumulated_loyalty_points }}/td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center">No data available for {{ admin_selected_year }}</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+
     </div>
 {% endblock %}

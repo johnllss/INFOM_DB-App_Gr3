@@ -647,6 +647,19 @@ def history():
 @login_required
 @admin_required
 def report():
+    import builtins # used to explicitly use python's built-in range()
+    from datetime import datetime
+
+    # extracting year from user input
+    admin_selected_year = request.args.get('year', type=int)
+    if admin_selected_year is None:
+        admin_selected_year = datetime.now().year
+
+    # generate a list of selectable years by the admin user (to be used in the reports.html template)
+    current_year = datetime.now().year
+    selectable_years = list(builtins.range(current_year, current_year - 10, -1))
+
+# FETCHING REPORTS SECTION
     # Only admins can reach this point
     # TODO: Ronald, Sales Performance Report
 
@@ -657,13 +670,13 @@ def report():
     # TODO: Jerry, Inventory Report
 
     # TODO: JL, Customer Value Report
-    customer_report = reports.get_customer_value_report(mysql)
+    customer_report = reports.get_customer_value_report(mysql, admin_selected_year)
 
     return render_template("reports.html", 
                            # sales_report=sales_report,
                            yearly_staff_report=yearly_staff_report, 
                            quarterly_staff_report=quarterly_staff_report, #inventory_report=inventory_report, 
-                           customer_report=customer_report)
+                           customer_report=customer_report, selectable_years=selectable_years, admin_selected_year=admin_selected_year)
 
 # Checkout (where all payments are settled)
 @app.route("/checkout", methods=["GET", "POST"])
