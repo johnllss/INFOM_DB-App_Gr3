@@ -512,13 +512,28 @@ def fairway():
             time = request.form.get("booking-time")
             datetime_str = f"{date} {time}:00"
             hole = request.form.get("booking-hole")
+            
+            # Validate that the datetime is in the future
+            import pytz
+            from datetime import datetime
+
+            # Define the target timezone (Asia/Manila)
+            PHILIPPINES_TZ = pytz.timezone('Asia/Manila')
+            booking_datetime = datetime.strptime(datetime_str, "%Y-%m-%d %H:%M:%S")
+            booking_datetime_aware = PHILIPPINES_TZ.localize(booking_datetime)
+            now_aware = datetime.now(PHILIPPINES_TZ)
+
+            print(booking_datetime_aware)
+            print(now_aware)
+            if booking_datetime_aware <= now_aware:
+                cur.close()
+                return apology("Date/Time invalid!", 400)
 
             # Create golf_session entry
             cur.execute("SELECT * FROM golf_session WHERE session_schedule = %s AND type = %s AND holes = %s", 
                         (datetime_str, "Fairway", hole))
-            
             if cur.rowcount == 0:
-                if hole == 'Full 18':
+                if hole == 'FULL 18':
                     price = 5000
                 else:
                     price = 3000

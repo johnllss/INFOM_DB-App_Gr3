@@ -263,6 +263,28 @@ def process_cart_payment(cur, user_id, checkout_context, mysql, payment_method_e
 
 # TODO: Ronald
 def process_golf_session_payment(cur, user_id, checkout_context):
+    # get all pending sessions for the user
+    cur.execute("""
+        SELECT su.session_user_id
+        FROM session_user su
+        WHERE su.user_id = %s AND su.status = 'Pending'
+    """, (user_id,))
+    pending_sessions = cur.fetchall()
+    for pending_session in pending_sessions:
+        session_user_id = pending_session["session_user_id"]
+
+        # create payment record for each pending session
+        cur.execute("""
+            INSERT INTO payment (total_price, date_paid, payment_method, status, discount_applied, user_id, cart_id, session_user_id) 
+            VALUES (%s, NOW(), %s, 'Paid', 0.00, %s, NULL, %s)
+        """, (checkout_context["session_fee"], payment_method_enum, user_id, session_user_id))
+
+        # update session_user status to 'Paid'
+        cur.execute("""
+            UPDATE session_user 
+            SET status = 'Paid' 
+            WHERE session_user_id = %s
+        """, (session_user_id,))
     return
 
 def update_loyalty_points(cur, user_id, checkout_context):
