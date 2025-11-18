@@ -149,7 +149,7 @@ def validate_payment_method(payment_method):
         # TODO Card info validation
 
         if not (card_name and card_number and expiry_date and cvv):
-            return apology("Fill in the complete card details.", 400)
+            return None, "Fill in the complete card details."
 
         message = "Your balance in your card has been deducted from your payment."
 
@@ -227,10 +227,13 @@ def process_membership_payment(cur, user_id):
     # TODO cart_id and session_user_id might need to be extracted
 
 # TODO: Jerry
-def process_cart_payment(cur, user_id, checkout_context):
+def process_cart_payment(cur, user_id, checkout_context, mysql, payment_method_enum):
 
     cur.execute("SELECT * FROM cart WHERE status = 'active' AND user_id = %s", (user_id,))
     old_cart = cur.fetchone()
+    
+    if not old_cart:
+        return
 
     cur.execute("SELECT * FROM item WHERE cart_id = %s", (old_cart["cart_id"],))
     old_items = cur.fetchall()
