@@ -286,7 +286,6 @@ def process_cart_payment(cur, user_id, checkout_context, payment_method_enum, tr
     old_items = cur.fetchall()
 
     for item in old_items:
-<<<<<<< HEAD
         cur.execute("""INSERT INTO item (name, category, price) 
                        VALUES (%s, %s, %s)""", 
                     (
@@ -294,12 +293,6 @@ def process_cart_payment(cur, user_id, checkout_context, payment_method_enum, tr
                     item["category"], 
                     item["price"]
                     ))
-=======
-        cur.execute("""
-            INSERT INTO item (name, category, price) 
-            VALUES (%s, %s, %s)
-        """, (item["name"], item["category"], item["price"]))
->>>>>>> d2218f2 (fix)
         
     # Archive the Old Cart
     cur.execute("UPDATE cart SET status = 'archived' WHERE cart_id = %s", (active_cart['cart_id'],))
