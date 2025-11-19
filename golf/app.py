@@ -462,7 +462,7 @@ def check_session_status():
         SELECT su.status
         FROM session_user su
         JOIN golf_session gs ON su.session_id = gs.session_id
-        WHERE su.user_id = %s AND gs.session_schedule = %s AND su.status != 'Cancelled'
+        WHERE su.user_id = %s AND gs.session_schedule = %s AND su.status = 'Confirmed'
     """, (session["user_id"], datetime_str))
     user_booking = cur.fetchone()
 
@@ -589,33 +589,29 @@ def fairway():
                     FROM session_user su
                     JOIN user u ON su.user_id = u.user_id
                     JOIN golf_session gs ON su.session_id = gs.session_id AND gs.session_schedule = %s
-                    WHERE su.user_id = %s AND su.status != 'Cancelled'
+                    WHERE su.user_id = %s AND su.status = 'Confirmed'
                 """, (datetime_str, session["user_id"]))
                 if cur.rowcount > 0:
                     cur.close()
                     return apology("You have already booked a session at this time slot.", 400)
-
-
-            # Insert session_user entry
-            cur.execute("INSERT INTO session_user (user_id, session_id, status) VALUES (%s, %s, %s)",
-                        (session['user_id'], session_id, "Pending"))
-            session["single_checkout_id"] = cur.lastrowid
-
-            session["checkout_details"] = {
-                "type": "single_session",
-                "session_user_id": cur.lastrowid
-            }
-
-            # Check if session is now fully booked
-            cur.execute("SELECT COUNT(*) as count FROM session_user WHERE session_id = %s", (session_id,))
-            user_count = cur.fetchone()
-            if user_count['count'] >= 8:
-                cur.execute("UPDATE golf_session SET status = %s WHERE session_id = %s",
-                            ("Fully Booked", session_id))
+                
+            # check if user has an existing pending booking for this time slot
+            cur.execute("""
+                SELECT su.session_user_id
+                FROM session_user su
+                JOIN golf_session gs ON su.session_id = gs.session_id
+                WHERE su.user_id = %s AND gs.session_schedule = %s AND su.status = 'Pending'
+            """, (session["user_id"], datetime_str))
+            existing_pending = cur.fetchone()
 
             # Staff Handling
             book_coach = request.form.get("booking-coach")
-            if book_coach != "0":
+            book_caddie = request.form.get("booking-caddie")
+            coach_id = book_coach if book_coach != "0" else None
+            caddie_id = book_caddie if book_caddie != "0" else None
+
+            # validate coach availability if selected
+            if coach_id:
                 cur.execute("""
                     SELECT s.max_clients, COUNT(su.session_id) AS current_bookings
                     FROM staff s
@@ -627,13 +623,23 @@ def fairway():
                 coach_status = cur.fetchone()
 
                 if coach_status["current_bookings"] >= coach_status["max_clients"]:
-                    return apology("This coach is fully booked for this time slot.", 400)
-                
-                cur.execute("UPDATE session_user SET coach_id = %s WHERE user_id = %s AND session_id = %s",
-                            (book_coach, session["user_id"], session_id))
+                    # if updating, check if the coach was already assigned to this booking
+                    if existing_pending:
+                        cur.execute("""
+                            SELECT coach_id
+                            FROM session_user
+                            WHERE session_user_id = %s
+                        """, (existing_pending['session_user_id'],))
+                        old_booking = cur.fetchone()
 
-            book_caddie = request.form.get("booking-caddie")
-            if book_caddie != "0":
+                        # if trying to keep the same coach, allow it
+                        if not old_booking or old_booking['coach_id'] != int(coach_id):
+                            return apology("This coach is fully booked for this time slot.", 400)
+                    else:
+                        return apology("This coach is fully booked for this time slot.", 400)
+                    
+            # validate caddie availability if selected
+            if caddie_id:
                 cur.execute("""
                     SELECT s.max_clients, COUNT(su.session_id) AS current_bookings
                     FROM staff s
@@ -641,14 +647,54 @@ def fairway():
                     LEFT JOIN golf_session gs ON su.session_id = gs.session_id AND gs.session_schedule = %s
                     WHERE s.staff_id = %s
                     GROUP BY s.staff_id, s.max_clients
-                """, (datetime_str, book_caddie))
+                """, (datetime_str, caddie_id))
                 caddie_status = cur.fetchone()
 
                 if caddie_status["current_bookings"] >= caddie_status["max_clients"]:
-                    return apology("This caddie is fully booked for this time slot.", 400)
+                    # if updating, check if the caddie was already assigned to this booking
+                    if existing_pending:
+                        cur.execute("""
+                            SELECT caddie_id
+                            FROM session_user
+                            WHERE session_user_id = %s
+                        """, (existing_pending['session_user_id'],))
+                        old_booking = cur.fetchone()
 
-                cur.execute("UPDATE session_user SET caddie_id = %s WHERE user_id = %s AND session_id = %s",
-                            (book_caddie, session["user_id"], session_id))
+                        # if trying to keep the same caddie, allow it
+                        if not old_booking or old_booking['caddie_id'] != int(caddie_id):
+                            return apology("This caddie is fully booked for this time slot.", 400)
+                    else:
+                            return apology("This caddie is fully booked for this time slot.", 400)
+                    
+            if existing_pending:
+                # update existing pending booking
+                session_user_id = existing_pending['session_user_id']
+                
+                cur.execute("""
+                    UPDATE session_user 
+                    SET coach_id = %s, caddie_id = %s, session_id = %s
+                    WHERE session_user_id = %s
+                """, (coach_id, caddie_id, session_id, session_user_id))
+                session["session_checkout_id"] = session_user_id
+                mysql.connection.commit()
+
+            else:
+                # create new pending booking
+                # Insert session_user entry
+                cur.execute("INSERT INTO session_user (user_id, session_id, status, caoch_id, caddie_id) VALUES (%s, %s, %s, %s, %s)",
+                            (session['user_id'], session_id, "Pending", coach_id, caddie_id))
+                session["single_checkout_id"] = cur.lastrowid
+
+            # Check if session is now fully booked
+            cur.execute("""
+                SELECT COUNT(*) as count 
+                FROM session_user 
+                WHERE session_id = %s AND status != 'Cancelled'
+            """, (session_id,))
+            user_count = cur.fetchone()
+            if user_count['count'] >= 8:
+                cur.execute("UPDATE golf_session SET status = %s WHERE session_id = %s",
+                            ("Fully Booked", session_id))
 
             mysql.connection.commit()
             return redirect("/checkout")
@@ -701,37 +747,34 @@ def range():
                     return apology("Selected session is fully booked. Please choose another schedule.", 400)
                 session_id = golf_session['session_id']
                 print("You made it here")
+
+                # check if user has a confirmed booking (paid)
                 cur.execute("""
                     SELECT *
                     FROM session_user su
                     JOIN user u ON su.user_id = u.user_id
                     JOIN golf_session gs ON su.session_id = gs.session_id AND gs.session_schedule = %s
-                    WHERE su.user_id = %s AND su.status != 'Cancelled'
+                    WHERE su.user_id = %s AND su.status = 'Confirmed'
                 """, (datetime_str, session["user_id"]))
                 if cur.rowcount > 0:
                     cur.close()
                     return apology("You have already booked a session at this time slot.", 400)
+                
+            # check if user has an existing pending booking for the chosen date and time slot
+            cur.execute("""
+                SELECT su.session_user_id
+                FROM session_user su
+                JOIN golf_session gs ON su.session_id = gs.session_id
+                WHERE su.user_id = %s AND gs.session_schedule = %s AND su.status = 'Pending'
+            """, (session["user_id"], datetime_str))
+            existing_pending = cur.fetchone()
 
-            # Insert session_user entry
-            cur.execute("INSERT INTO session_user (user_id, session_id, status, buckets) VALUES (%s, %s, %s, %s)",
-                        (session['user_id'], session_id, "Pending", bucket))
-            session["single_checkout_id"] = cur.lastrowid
-
-            session["checkout_details"] = {
-                "type": "single_session",
-                "session_user_id": cur.lastrowid
-            }
-
-            # Check if session is now fully booked
-            cur.execute("SELECT COUNT(*) as count FROM session_user WHERE session_id = %s", (session_id,))
-            user_count = cur.fetchone()
-            if user_count['count'] >= 25:
-                cur.execute("UPDATE golf_session SET status = %s WHERE session_id = %s",
-                            ("Fully Booked", session_id))
-
-            # Staff Handling
+            # staff handling
             book_coach = request.form.get("booking-coach")
-            if book_coach != "0":
+            coach_id = book_coach if book_coach != "0" else None
+
+            # validate coach availability if selected
+            if coach_id:
                 cur.execute("""
                     SELECT s.max_clients, COUNT(su.session_id) AS current_bookings
                     FROM staff s
@@ -739,14 +782,60 @@ def range():
                     LEFT JOIN golf_session gs ON su.session_id = gs.session_id AND gs.session_schedule = %s
                     WHERE s.staff_id = %s
                     GROUP BY s.staff_id, s.max_clients
-                """, (datetime_str, book_coach))
+                """, (datetime_str, coach_id))
                 coach_status = cur.fetchone()
 
                 if coach_status["current_bookings"] >= coach_status["max_clients"]:
-                    return apology("This coach is fully booked for this time slot.", 400)
-                
-                cur.execute("UPDATE session_user SET coach_id = %s WHERE user_id = %s AND session_id = %s",
-                            (book_coach, session["user_id"], session_id))
+                    # if updating, check if this coach was already assigned to this booking
+                    if existing_pending:
+                        cur.execute("""
+                            SELECT coach_id
+                            FROM session_user
+                            WHERE session_user_id = %s
+                        """, (existing_pending['session_user_id'],))
+                        old_booking = cur.fetchone()
+
+                        # if trying to keep the same coach, allow it
+                        if not old_booking or old_booking['coach_id'] != int(coach_id):
+                            return apology("This coach is fully booked for this time slot.", 400)
+                    else:
+                        return apology("This coach is fully booked for this time slot.", 400)
+
+            if existing_pending:
+                # update existing pending booking
+                session_user_id = existing_pending['session_user_id']
+
+                cur.execute("""
+                    UPDATE session_user
+                    SET buckets = %s, coach_id = %s, session_id = %s
+                    WHERE session_user_id = %s
+                """, (bucket, coach_id, session_id, session_user_id))
+                session["single_checkout_id"] = session_user_id
+                mysql.connection.commit()
+
+            else:
+                #create new pending booking
+                # Insert session_user entry
+                cur.execute("""
+                    INSERT INTO session_user (user_id, session_id, status, buckets, coach_id) 
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (session['user_id'], session_id, "Pending", bucket, coach_id))
+                session["single_checkout_id"] = cur.lastrowid
+
+            # Check if session is now fully booked
+            cur.execute("""
+                SELECT COUNT(*) as count 
+                FROM session_user 
+                WHERE session_id = %s AND status != 'Cancelled'
+            """, (session_id,))
+            user_count = cur.fetchone()
+
+            if user_count['count'] >= 25:
+                cur.execute("""
+                    UPDATE golf_session 
+                    SET status = %s 
+                    WHERE session_id = %s
+                """, ("Fully Booked", session_id))
 
             mysql.connection.commit()
             return redirect("/checkout")
@@ -755,9 +844,8 @@ def range():
             return apology(str(e), 400)
         finally:
             cur.close()
-    else:
-        cur.close()
-        return render_template("range.html", coach=coach)
+
+    return render_template("range.html", coach=coach)
 
 @app.route("/account")
 @login_required
