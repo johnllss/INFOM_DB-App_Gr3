@@ -172,7 +172,7 @@ def validate_payment_method(payment_method):
 
     return method, message
 
-def process_membership_payment(cur, user_id, payment_method_enum):
+def process_membership_payment(cur, user_id, payment_method_enum, transaction_ref):
 # UPDATING OF USER'S MEMBERSHIP tier AND membership_end
     # extract membership details from session through 
     checkout_details = session.get("checkout_details", {})
@@ -235,7 +235,7 @@ def process_membership_payment(cur, user_id, payment_method_enum):
     cur.execute("""
                 INSERT INTO payment (total_price, date_paid, payment_method, status, discount_applied, user_id, cart_id, session_user_id, transaction_ref) 
                 VALUES (%s, NOW(), %s, 'Paid', %s, %s, %s, %s, %s)""",
-                (total_price, payment_method_enum, 0.00, user_id, None, None, None))
+                (total_price, payment_method_enum, 0.00, user_id, None, None, transaction_ref))
     # TODO cart_id and session_user_id might need to be extracted
 
 def process_cart_payment(cur, user_id, checkout_context, payment_method_enum, transaction_ref):

@@ -554,7 +554,7 @@ def check_staff_availability():
             ) AS current_bookings
         FROM staff s
         WHERE s.staff_id = %s
-    """, (datetime_str, datetime_str, staff_id))
+    """, (datetime_str, staff_id))
     
     staff_status = cur.fetchone()
     cur.close()
@@ -643,20 +643,19 @@ def fairway():
             # validate coach availability if selected
             if coach_id:
                 cur.execute("""
-                    SELECT s.max_clients, 
-                    (
-                        SELECT COUNT(*) 
-                        FROM session_user su
-                        JOIN golf_session gs ON su.session_id = gs.session_id
-                        WHERE su.coach_id = s.staff_id 
-                        AND su.status != 'Cancelled'
-                    ) AS current_bookings
+                    SELECT 
+                        s.max_clients, 
+                        (
+                            SELECT COUNT(*) 
+                            FROM session_user su
+                            JOIN golf_session gs ON su.session_id = gs.session_id
+                            WHERE su.coach_id = s.staff_id 
+                            AND gs.session_schedule = %s 
+                            AND su.status != 'Cancelled'
+                        ) AS current_bookings
                     FROM staff s
-                    LEFT JOIN session_user su ON s.staff_id = su.coach_id AND su.status != 'Cancelled'
-                    LEFT JOIN golf_session gs ON su.session_id = gs.session_id AND gs.session_schedule = %s
                     WHERE s.staff_id = %s
-                """, (datetime_str, datetime_str, coach_id))
-                
+                """, (datetime_str, coach_id))
                 coach_status = cur.fetchone()
 
                 if coach_status["current_bookings"] >= coach_status["max_clients"]:
@@ -678,21 +677,21 @@ def fairway():
             # validate caddie availability if selected
             if caddie_id:
                 cur.execute("""
-                    SELECT s.max_clients, 
-                    (
-                        SELECT COUNT(*) 
-                        FROM session_user su
-                        JOIN golf_session gs ON su.session_id = gs.session_id
-                        WHERE su.caddie_id = s.staff_id 
-                        AND su.status != 'Cancelled'
-                    ) AS current_bookings
+                    SELECT 
+                        s.max_clients, 
+                        (
+                            SELECT COUNT(*) 
+                            FROM session_user su
+                            JOIN golf_session gs ON su.session_id = gs.session_id
+                            WHERE su.caddie_id = s.staff_id 
+                            AND gs.session_schedule = %s 
+                            AND su.status != 'Cancelled'
+                        ) AS current_bookings
                     FROM staff s
-                    LEFT JOIN session_user su ON s.staff_id = su.caddie_id AND su.status != 'Cancelled'
-                    LEFT JOIN golf_session gs ON su.session_id = gs.session_id AND gs.session_schedule = %s
                     WHERE s.staff_id = %s
-                """, (datetime_str, datetime_str, caddie_id))
-                
+                """, (datetime_str, caddie_id))
                 caddie_status = cur.fetchone()
+
                 if caddie_status["current_bookings"] >= caddie_status["max_clients"]:
                     # if updating, check if the caddie was already assigned to this booking
                     if existing_pending:
@@ -819,20 +818,19 @@ def range():
             # validate coach availability if selected
             if coach_id:
                 cur.execute("""
-                    SELECT s.max_clients, 
-                    (
-                        SELECT COUNT(*) 
-                        FROM session_user su
-                        JOIN golf_session gs ON su.session_id = gs.session_id
-                        WHERE su.coach_id = s.staff_id 
-                        AND su.status != 'Cancelled'
-                    ) AS current_bookings
+                    SELECT 
+                        s.max_clients, 
+                        (
+                            SELECT COUNT(*) 
+                            FROM session_user su
+                            JOIN golf_session gs ON su.session_id = gs.session_id
+                            WHERE su.coach_id = s.staff_id 
+                            AND gs.session_schedule = %s 
+                            AND su.status != 'Cancelled'
+                        ) AS current_bookings
                     FROM staff s
-                    LEFT JOIN session_user su ON s.staff_id = su.coach_id AND su.status != 'Cancelled'
-                    LEFT JOIN golf_session gs ON su.session_id = gs.session_id AND gs.session_schedule = %s
                     WHERE s.staff_id = %s
-                """, (datetime_str, datetime_str, coach_id))
-                
+                """, (datetime_str, coach_id))
                 coach_status = cur.fetchone()
 
                 if coach_status["current_bookings"] >= coach_status["max_clients"]:
@@ -1102,7 +1100,7 @@ def checkout():
             # Process payments modularly
             transaction_ref = datetime.now().strftime('%Y%m%d') + "-" + str(uuid.uuid4())[:8].upper()
             if checkout_context["membership_fee"] != 0:
-                process.process_membership_payment(cur, user_id, payment_method_enum)
+                process.process_membership_payment(cur, user_id, payment_method_enum, transaction_ref)
 
             if checkout_context["cart_fee"] != 0:
                 process.process_cart_payment(cur, user_id, checkout_context, payment_method_enum, transaction_ref)
@@ -1149,3 +1147,6 @@ def logout():
 
     # Redirect user to login form
     return redirect("/")
+
+if __name__ == "__main__":
+    app.run(debug=True, port=5000)
