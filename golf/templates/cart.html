@@ -22,6 +22,7 @@
             <tr>
                 <th>Product Name</th>
                 <th class="text-center">Quantity</th>
+                <th class="text-center">Type</th>
                 <th class="text-center">Subtotal</th>
                 <th></th>
             </tr>
@@ -40,6 +41,13 @@
                             <button type="button" class="btn btn-success quantity-btn ms-2">+</button>
 
                         </div>
+                    </td>
+
+                    <td class="text-center">
+                        <select class="form-select item-type-select" data-item-id="{{ item.item_id }}">
+                            <option value="Sale" {% if item.type == "Sale" %}selected{% endif %}>Sale</option>
+                            <option value="Rental" {% if item.type == "Rental" %}selected{% endif %}>Rent</option>
+                        </select>
                     </td>
 
                     <!-- Subtotal -->
@@ -79,6 +87,27 @@
 </div>
 
 <script>
+
+document.querySelectorAll(".item-type-select").forEach(select => {
+    select.addEventListener("change", () => {
+        const itemId = select.dataset.itemId;
+        const itemType = select.value;
+
+        fetch("/api/update_item_type", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ item_id: itemId, type: itemType })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (!data.success) {
+                alert("Failed to update item type.");
+            }
+        })
+        .catch(err => console.error(err));
+    });
+});
+
 document.addEventListener("DOMContentLoaded", () => {
     const removeButtons = document.querySelectorAll(".remove-btn");
     const quantityControls = document.querySelectorAll(".quantity-btn");

@@ -287,7 +287,7 @@ def process_cart_payment(cur, user_id, checkout_context, payment_method_enum, tr
 
     for item in old_items:
         cur.execute("""INSERT INTO item (name, category, price) 
-                       VALUES (%s, %s, %s, %s)""", 
+                       VALUES (%s, %s, %s)""", 
                     (
                     item["name"], 
                     item["category"], 

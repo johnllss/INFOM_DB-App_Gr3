@@ -420,6 +420,26 @@ def update_cart_quantity():
     cursor.close()
     return jsonify({"success": True, "cart-total": items_total, "sub-tot": sub_total})
 
+
+@app.route("/api/update_item_type", methods=["POST"])
+@login_required
+def update_item_type():
+    data = request.get_json()
+    item_id = data["item_id"]
+    new_type = data["type"]
+
+    print(item_id)
+
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor.execute("UPDATE item SET type = %s WHERE item_id = %s", (new_type, item_id))
+    mysql.connection.commit()
+
+    cursor.close()
+
+    return jsonify({
+        "success": True,
+    })
+
 @app.route("/cart", methods=["GET", "POST"])
 @login_required
 def cart():
