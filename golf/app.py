@@ -556,7 +556,7 @@ def check_staff_availability():
             ) AS current_bookings
         FROM staff s
         WHERE s.staff_id = %s
-    """, (datetime_str, staff_id))
+    """, (datetime_str, datetime_str, staff_id))
     
     staff_status = cur.fetchone()
     cur.close()
