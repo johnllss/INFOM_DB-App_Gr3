@@ -1,9 +1,5 @@
 # TODO: Ronald, Sales Performance Report
-def get_yearly_sales_report(mysql, year=None):
-    if year is None:
-        from datetime import datetime
-        year = datetime.now().year
-
+def get_yearly_sales_report(mysql):
     query = """
     SELECT 
         year,
@@ -53,6 +49,7 @@ def get_yearly_sales_report(mysql, year=None):
         WHERE
             p.status = 'Paid' AND p.cart_id IS NULL AND p.session_user_id IS NULL AND YEAR(p.date_paid) = %s
     ) AS combined_revenue
+    WHERE year = %s
     GROUP BY
         year
     ORDER BY
@@ -60,14 +57,82 @@ def get_yearly_sales_report(mysql, year=None):
     """
     try:
         cur = mysql.connection.cursor()
-        cur.execute(query, (year, year, year)) # 3 years passed for 3 union queries
+        cur.execute(query)
         report = cur.fetchall()
         cur.close()
         return report
     except Exception as e:
         print(f"Error fetching yearly sales report: {e}")
         return []
-    pass
+
+def get_monthly_sales_report(mysql, year=None):
+    if year is None:
+        from datetime import datetime
+        year = datetime.now().year
+    
+    query = """
+    SELECT 
+        month,
+        SUM(session_items) AS session_items,
+        SUM(membership_subscriptions) AS membership_subscriptions,
+        COUNT(session_user_id_for_count) AS total_sessions,
+        COUNT(DISTINCT user_id) AS unique_customers,
+        SUM(renewal_rate) AS renewal_rate
+    FROM (
+        SELECT
+            MONTH(gs.session_schedule) AS month,
+            gs.session_price AS session_items,
+            0 AS membership_subscriptions,
+            su.session_user_id AS session_user_id_for_count,
+            su.user_id AS user_id,
+            0 AS renewal_rate
+        FROM
+            golf_session gs
+        JOIN
+            session_user su ON gs.session_id = su.session_id
+        WHERE
+            su.status = 'Confirmed' AND gs.status IN ('Finished', 'Ongoing') AND YEAR(gs.session_schedule) = %s
+        UNION ALL
+        SELECT
+            MONTH(p.date_paid) AS month,
+            c.total_price AS session_items,
+            0 AS membership_subscriptions,
+            NULL AS session_user_id_for_count,
+            p.user_id AS user_id,
+            0 AS renewal_rate
+        FROM
+            payment p
+        JOIN
+            cart c ON p.cart_id = c.cart_id
+        WHERE
+            c.status = 'archived' AND YEAR(p.date_paid) = %s
+        UNION ALL
+        SELECT
+            MONTH(p.date_paid) AS month,
+            0 AS session_items,
+            p.total_price AS membership_subscriptions,
+            NULL AS session_user_id_for_count,
+            p.user_id AS user_id,
+            1 AS renewal_rate
+        FROM
+            payment p
+        WHERE
+            p.status = 'Paid' and p.cart_id IS NULL and p.session_user_id IS NULL AND YEAR(p.date_paid) = %s
+    ) AS combined_revenue
+    GROUP BY
+        month
+    ORDER BY
+        month DESC;
+    """
+    try:
+        cur = mysql.connection.cursor()
+        cur.execute(query, (year, year, year,))
+        report = cur.fetchall()
+        cur.close()
+        return report
+    except Exception as e:
+        print(f"Error fetching monthly sales report: {e}")
+        return []
 
 def get_yearly_staff_report(mysql, year=None):
     if year is None:

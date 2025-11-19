@@ -61,6 +61,36 @@
             </table>
         </div>
 
+        <h2 class="mt-5">Monthly Sales Performance</h2>
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead class="text-white" style="background-color: #2e944b;">
+                    <tr>
+                        <th>Month</th>
+                        <th>Rev. (Sessions/Items)</th>
+                        <th>Rev. (Memberships)</th>
+                        <th>Renewal Rate</th>
+                        <th>Total Sessions</th>
+                        <th>Unique Customers</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in monthly_sales_report %}
+                    <tr>
+                        <td>{{ row.month }}</td>
+                        <td>{{ row.session_items }}</td>
+                        <td>{{ row.membership_subscriptions }}</td>
+                        <td>{{ row.renewal_rate }}</td>
+                        <td>{{ row.total_sessions }}</td>
+                        <td>{{ row.unique_customers }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" class="text-center">No sales data found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
         <h2 class="mt-5">Yearly Staff Performance ({{ admin_selected_year }})</h2>
         <div class="table-responsive">
             <table class="table table-striped table-hover">
