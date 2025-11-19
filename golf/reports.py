@@ -1,5 +1,9 @@
 # TODO: Ronald, Sales Performance Report
-def get_yearly_sales_report(mysql):
+def get_yearly_sales_report(mysql, year=None):
+    if year is None:
+        from datetime import datetime
+        year = datetime.now().year
+
     query = """
     SELECT 
         year,
@@ -49,7 +53,6 @@ def get_yearly_sales_report(mysql):
         WHERE
             p.status = 'Paid' AND p.cart_id IS NULL AND p.session_user_id IS NULL AND YEAR(p.date_paid) = %s
     ) AS combined_revenue
-    WHERE year = %s
     GROUP BY
         year
     ORDER BY
@@ -57,7 +60,7 @@ def get_yearly_sales_report(mysql):
     """
     try:
         cur = mysql.connection.cursor()
-        cur.execute(query)
+        cur.execute(query, (year, year, year))
         report = cur.fetchall()
         cur.close()
         return report
