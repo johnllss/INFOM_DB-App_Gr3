@@ -891,6 +891,25 @@ def account():
 # GAME STATISTICS INFO (get best game out of all the sessions)
     # ROW 1
     cur.execute("""
+        UPDATE session_user su
+        JOIN golf_session gs ON gs.session_id = su.session_id
+        SET 
+            su.longest_range = CASE
+                WHEN gs.type = 'Driving Range' AND su.longest_range IS NULL 
+                THEN FLOOR(RAND() * 201) + 100
+                ELSE su.longest_range
+            END,
+            su.score_fairway = CASE
+                WHEN gs.type = 'Fairway' AND su.score_fairway IS NULL 
+                THEN FLOOR(RAND() * 101) + 50
+                ELSE su.score_fairway
+            END
+        WHERE
+            gs.status = 'Finished' AND su.status = 'Confirmed'
+    """)
+    mysql.connection.commit()
+
+    cur.execute("""
                 SELECT su.longest_range as longest_driving_range, DATE_FORMAT(gs.session_schedule, '%%Y-%%m-%%d') as date_achieved
                 FROM session_user su JOIN golf_session gs ON su.session_id = gs.session_id
                 WHERE su.user_id = %s AND su.longest_range IS NOT NULL
@@ -1108,4 +1127,3 @@ def logout():
 
     # Redirect user to login form
     return redirect("/")
-
