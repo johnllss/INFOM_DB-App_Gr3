@@ -286,16 +286,11 @@ def process_cart_payment(cur, user_id, checkout_context, payment_method_enum, tr
     old_items = cur.fetchall()
 
     for item in old_items:
-        cur.execute("""INSERT INTO item (name, category, price) 
-                       VALUES (%s, %s, %s)""", 
-                    (
-                    item["name"], 
-                    item["category"], 
-                    item["price"]
-                    ))
+        cur.execute("""
+            INSERT INTO item (name, category, price) 
+            VALUES (%s, %s, %s)
+        """, (item["name"], item["category"], item["price"]))
         
-    mysql.connection.commit()
-
     # Archive the Old Cart
     cur.execute("UPDATE cart SET status = 'archived' WHERE cart_id = %s", (active_cart['cart_id'],))
     
@@ -338,19 +333,19 @@ def process_golf_session_payment(cur, user_id, checkout_context, payment_method_
                        JOIN golf_session gs ON su.session_id = gs.session_id 
                        WHERE su.session_user_id = %s""", (s_id,))
         base = cur.fetchone()
-        if base: ind_price += Decimal(base['session_price'])
+        if base: ind_gross_price += Decimal(base['session_price'])
         
-        if sess['buckets']: ind_price += Decimal(sess['buckets'] * 300)
+        if sess['buckets']: ind_gross_price += Decimal(sess['buckets'] * 300)
         
         if sess['coach_id']:
              cur.execute("SELECT service_fee FROM staff WHERE staff_id = %s", (sess['coach_id'],))
              s = cur.fetchone()
-             if s: ind_price += Decimal(s['service_fee'])
+             if s: ind_gross_price += Decimal(s['service_fee'])
 
         if sess['caddie_id']:
              cur.execute("SELECT service_fee FROM staff WHERE staff_id = %s", (sess['caddie_id'],))
              s = cur.fetchone()
-             if s: ind_price += Decimal(s['service_fee'])
+             if s: ind_gross_price += Decimal(s['service_fee'])
 
         sess_member_discount = ind_gross_price * (discount_percent / Decimal('100.0'))
 
@@ -375,7 +370,7 @@ def process_golf_session_payment(cur, user_id, checkout_context, payment_method_
         else:
             cur.execute("""
                 INSERT INTO payment (total_price, date_paid, payment_method, status, discount_applied, user_id, session_user_id, transaction_ref) 
-                VALUES (%s, NOW(), %s, 'Paid', %s, %s, %s, %s)
+                VALUES (%s, NOW(), %s, 'Paid', %s, %s, NULL, %s, %s)
             """, (final_sess_price, payment_method_enum, user_id, total_sess_discount, s_id, transaction_ref))
 
         cur.execute("UPDATE session_user SET status = 'Confirmed' WHERE session_user_id = %s", (s_id,))
