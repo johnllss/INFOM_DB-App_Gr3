@@ -540,18 +540,20 @@ def check_staff_availability():
 
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     
-    # Check specific time slot load
     cur.execute("""
         SELECT 
             s.max_clients, 
-            COUNT(su.session_id) AS current_bookings
+            (
+                SELECT COUNT(*)
+                FROM session_user su
+                JOIN golf_session gs ON su.session_id = gs.session_id
+                WHERE 
+                    (su.coach_id = s.staff_id OR su.caddie_id = s.staff_id)
+                    AND gs.session_schedule = %s
+                    AND su.status != 'Cancelled'
+            ) AS current_bookings
         FROM staff s
-        LEFT JOIN session_user su ON 
-            (s.staff_id = su.coach_id OR s.staff_id = su.caddie_id) 
-            AND su.status != 'Cancelled'
-        LEFT JOIN golf_session gs ON su.session_id = gs.session_id AND gs.session_schedule = %s
         WHERE s.staff_id = %s
-        GROUP BY s.staff_id, s.max_clients
     """, (datetime_str, staff_id))
     
     staff_status = cur.fetchone()
