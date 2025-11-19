@@ -75,7 +75,7 @@ CREATE TABLE `item` (
   `item_id` int NOT NULL AUTO_INCREMENT,
   `name` varchar(100) NOT NULL,
   `category` enum('Clubs','Balls','Bags','Apparel','Equipment','Miscellaneous') DEFAULT NULL,
-  `type` enum('Sale','Rental') NOT NULL,
+  `type` enum('Sale','Rental') NOT NULL DEFAULT 'Sale',
   `quantity` int NOT NULL DEFAULT '1',
   `price` decimal(10,2) NOT NULL,
   `cart_id` int DEFAULT NULL,
