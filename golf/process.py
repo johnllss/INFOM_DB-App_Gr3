@@ -280,7 +280,7 @@ def process_cart_payment(cur, user_id, checkout_context, payment_method_enum, tr
         cur.execute("""
             INSERT INTO payment (total_price, date_paid, payment_method, status, discount_applied, user_id, cart_id, session_user_id, transaction_ref) 
             VALUES (%s, NOW(), %s, 'Paid', %s, %s, %s, NULL, %s)
-        """, (final_cart_price, payment_method_enum, total_cart_discount, user_id, active_cart['cart_id']), transaction_ref)
+        """, (final_cart_price, payment_method_enum, total_cart_discount, user_id, active_cart['cart_id'], transaction_ref))
 
     # Archive Old Cart & Create New
     cur.execute("UPDATE cart SET status = 'archived' WHERE cart_id = %s", (active_cart['cart_id'],))
