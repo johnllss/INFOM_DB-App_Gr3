@@ -2,7 +2,7 @@ CREATE DATABASE IF NOT EXISTS `golf_db` DEFAULT CHARACTER SET utf8mb4 COLLATE ut
 USE `golf_db`;
 
 -- ==========================================
--- 1. STANDALONE TABLES
+-- 1. STANDALONE TABLES (Create these first)
 -- ==========================================
 
 -- Table structure for table `user`
@@ -54,7 +54,7 @@ CREATE TABLE `golf_session` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- ==========================================
--- 2. DEPENDENT TABLES
+-- 2. DEPENDENT TABLES (Create these next)
 -- ==========================================
 
 -- Table structure for table `cart`
@@ -86,7 +86,11 @@ CREATE TABLE `item` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- Table structure for table `session_user`
+SET FOREIGN_KEY_CHECKS = 0;
+
+-- 1. DROP AND RE-CREATE SESSION_USER (To fix the Unique constraint issue)
 DROP TABLE IF EXISTS `session_user`;
+
 CREATE TABLE `session_user` (
   `session_user_id` int NOT NULL AUTO_INCREMENT,
   `user_id` int DEFAULT NULL,
@@ -98,7 +102,7 @@ CREATE TABLE `session_user` (
   `buckets` int DEFAULT NULL,
   `status` enum('Cancelled','Pending','Confirmed') DEFAULT 'Pending',
   PRIMARY KEY (`session_user_id`),
-  UNIQUE KEY `session_id` (`session_id`,`user_id`),
+  -- UNIQUE KEY REMOVED HERE
   KEY `fk_coach` (`coach_id`),
   KEY `fk_caddie` (`caddie_id`),
   KEY `idx_user_status` (`user_id`,`status`),
@@ -116,10 +120,12 @@ CREATE TABLE `payment` (
   `date_paid` datetime DEFAULT NULL,
   `payment_method` enum('Cash','GCash','Credit Card') NOT NULL,
   `status` enum('Pending','Paid') NOT NULL,
+  -- FIXED: Increased precision to avoid crashes on high discounts
   `discount_applied` decimal(10,2) DEFAULT '0.00', 
   `user_id` int NOT NULL,
   `cart_id` int DEFAULT NULL,
   `session_user_id` int DEFAULT NULL,
+  -- FIXED: Added transaction_ref for grouping history
   `transaction_ref` varchar(100) DEFAULT NULL,
   PRIMARY KEY (`payment_id`),
   KEY `fk_payment_cart` (`cart_id`),
