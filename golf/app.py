@@ -11,6 +11,8 @@ import helpers
 import process
 import reports
 
+import traceback
+
 app = Flask(__name__)
 
 app.jinja_env.filters["php"] = php
@@ -277,13 +279,21 @@ def shop():
     cursor.execute(query, param) 
     items = cursor.fetchall() 
 
-    cursor.execute("SELECT cart_id FROM cart WHERE user_id = %s", (session["user_id"],))
+    cursor.execute("SELECT cart_id FROM cart WHERE user_id = %s AND status = 'active'", (session["user_id"],))
     cart = cursor.fetchone()
 
-    cursor.execute("SELECT COUNT(item_id) AS numm FROM item WHERE cart_id = %s", (cart["cart_id"],))
-    num = cursor.fetchone()
-
-    cartNum = num["numm"]
+    if not cart:
+        # If no active cart, create one
+        cursor.execute("INSERT INTO cart (user_id, total_price, status) VALUES (%s, 0, 'active')", (session["user_id"],))
+        mysql.connection.commit()
+        cart_id = cursor.lastrowid
+        cartNum = 0
+    else:
+        cart_id = cart["cart_id"]
+        # Count items in the existing cart
+        cursor.execute("SELECT COUNT(item_id) AS numm FROM item WHERE cart_id = %s", (cart_id,))
+        num = cursor.fetchone()
+        cartNum = num["numm"]
     
 
     cursor.close() # Example count 
@@ -300,7 +310,7 @@ def remove_from_cart():
     cursor.execute("UPDATE item SET cart_id = NULL, quantity = 1 WHERE item_id = %s", (item_id,))
     mysql.connection.commit()
 
-    cursor.execute("SELECT cart_id FROM cart WHERE user_id = %s", (session["user_id"],))
+    cursor.execute("SELECT cart_id FROM cart WHERE user_id = %s AND status = 'active'", (session["user_id"],))
     cart = cursor.fetchone()
     cart_id = cart["cart_id"]
 
@@ -339,7 +349,7 @@ def add_to_cart():
         cursor.close()
         return {"status": "error", "message": "Item not found"}, 404
 
-    cursor.execute("SELECT cart_id FROM cart WHERE user_id = %s", (session["user_id"],))
+    cursor.execute("SELECT cart_id FROM cart WHERE user_id = %s AND status = 'active'", (session["user_id"],))
     cart = cursor.fetchone()
 
     if not cart:
@@ -384,7 +394,7 @@ def update_cart_quantity():
     mysql.connection.commit()
 
     # Recalculate total for the cart
-    cursor.execute("SELECT cart_id FROM cart WHERE user_id = %s", (session["user_id"],))
+    cursor.execute("SELECT cart_id FROM cart WHERE user_id = %s AND status = 'active'", (session["user_id"],))
     cart = cursor.fetchone()
     cart_id = cart["cart_id"]
 
@@ -408,25 +418,20 @@ def cart():
         
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
 
-    cursor.execute("SELECT cart_id FROM cart WHERE user_id = %s", (session["user_id"],))
+    cursor.execute("SELECT cart_id, total_price FROM cart WHERE user_id = %s AND status = 'active'", (session["user_id"],))
     cart = cursor.fetchone()
-    cart_id = cart["cart_id"]
 
     if cart:
+        cart_id = cart["cart_id"]
+        total = cart["total_price"]
+
         cursor.execute("SELECT * FROM item WHERE cart_id = %s", (cart_id,))
         cart_items = cursor.fetchall()
     else:
         cart_items = []
-
-    # Calculate total
-
-    cursor.execute("SELECT total_price FROM cart WHERE cart_id = %s", (cart_id,))
-    price_total = cursor.fetchone()
-    
-    total = price_total["total_price"]
+        total = 0
 
     cursor.close()
-
     return render_template("cart.html", cart_items=cart_items, total=total)
 
 @app.route("/booking", methods=["GET", "POST"])
@@ -906,10 +911,10 @@ def checkout():
                 process.process_membership_payment(cur, user_id)
 
             if checkout_context["cart_fee"] != 0:
-                process.process_cart_payment(cur, user_id, payment_method_enum)
+                process.process_cart_payment(cur, user_id, checkout_context, payment_method_enum)
 
             if checkout_context["session_fee"] != 0:
-                process.process_golf_session_payment(cur, user_id, checkout_context, payment_method_enum)
+                process.process_golf_session_payment(cur, user_id, payment_method_enum)
 
             process.update_loyalty_points(cur, user_id, checkout_context)
 
@@ -917,7 +922,17 @@ def checkout():
 
         except Exception as e:
             mysql.connection.rollback()
-            return apology(f"An error occurred: {e}", 500)
+            # 1. PRINT TO TERMINAL (The most clear way to see it)
+            print("\n\n")
+            print("!" * 50)
+            print("PAYMENT PROCESSING ERROR:")
+            traceback.print_exc()  # This prints the file path and line number
+            print("!" * 50)
+            print("\n\n")
+
+            # 2. SHOW IN BROWSER
+            # traceback.format_exc() converts the stack trace to a string
+            return apology(f"System Error: {traceback.format_exc()}", 500)
         finally:
             cur.close()
 

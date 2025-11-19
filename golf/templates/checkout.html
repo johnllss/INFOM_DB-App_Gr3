@@ -17,6 +17,21 @@
                 <div>Session Total Fee</div>
                 <div class="ms-auto"><strong>{{ session_fee | php }}</strong></div>
             </div>
+
+            {% if session_details %}
+                <div class="d-flex flex-column mb-2 border-start border-3 ps-2 ms-1 mt-1">
+                    {% for session in session_details %}
+                    <div class="d-flex text-muted" style="font-size: 0.85rem;">
+                        <div>
+                            {{ session.type }}
+                            <span class="d-block fst-italic" style="font-size: 0.75rem;">{{ session.schedule }}</span>
+                        </div>
+                        <div class="ms-auto">{{ session.price | php }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
             <div class="d-flex">
                 <div>Cart Total Fee</div>
                 <div class="ms-auto"><strong>{{ cart_fee | php }}</strong></div>
@@ -37,7 +52,7 @@
             </div>
             <div class="d-flex">
                 <div>Loyalty Points Discount ({{ loyalty_points_used }} pts)</div>
-                <div class="ms-auto"><strong>-{{ loyalty_discount | php }}</strong></div>
+                <div class="ms-auto"><strong>-{{ loyalty_points_discount | php }}</strong></div>
             </div>
 
             <hr class="my-2">
@@ -67,34 +82,35 @@
                 <span class="fs-7">Enter your card details below.</span>
             </div>
 
-            <div class="d-flex flex-column gap-3">
-                <div class="d-flex flex-column">
+            <form method="POST" action="/checkout" class="d-flex flex-column gap-3">
+                <input type="hidden" name="method" value="card"> <div class="d-flex flex-column">
                     <span class="fs-7">Name on card</span>
-                    <input autocomplete="off" autofocus class="form-control" name="name" placeholder="Enter your name" type="text">
+                    <input autocomplete="off" autofocus class="form-control" name="name" placeholder="Enter your name" type="text" required>
                 </div>
                 <div class="d-flex flex-column position-relative">
                     <span class="fs-7">Card Number</span>
                     <div class="d-flex align-items-center position-relative">
                         <input autocomplete="off" autofocus class="form-control" id="cardNumber" 
-                            name="c_num" placeholder="Enter your card number" type="text" maxlength="19">
+                            name="c_num" placeholder="Enter your card number" type="text" maxlength="19" required>
                         <span id="cardType" class="position-absolute end-0 me-3 text-secondary fw-bold"></span>
                     </div>
                 </div>
                 <div class="d-flex gap-2">
                     <div class="d-flex flex-fill flex-column">
                         <span class="fs-7">Expiry Date</span>
-                        <input autocomplete="off" autofocus class="form-control" name="exp_date" placeholder="MM/YY" type="text">
+                        <input autocomplete="off" autofocus class="form-control" name="exp_date" placeholder="MM/YY" type="text" required>
                     </div>
                     <div class="d-flex flex-fill flex-column">
                         <span class="fs-7">CVV</span>
-                        <input autocomplete="off" autofocus class="form-control" name="cvv" placeholder="e.g. 123" type="text">
+                        <input autocomplete="off" autofocus class="form-control" name="cvv" placeholder="e.g. 123" type="text" required>
                     </div>
                 </div>
-                <form method="POST" action="/checkout" class="d-flex flex-column">
-                    <button type="submit" name="method" value="card" class="btn flex-fill homepage-welcome text-center fs-5"><strong>Complete Payment</strong></button>
-                </form>
-            </div>
-
+                
+                <button type="submit" class="btn flex-fill homepage-welcome text-center fs-5 mt-2">
+                    <strong>Complete Payment</strong>
+                </button>
+            </form>
+            
         </div>
 
     </div>
