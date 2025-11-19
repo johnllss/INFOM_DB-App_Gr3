@@ -551,8 +551,6 @@ def check_staff_availability():
                     (su.coach_id = s.staff_id OR su.caddie_id = s.staff_id)
                     AND gs.session_schedule = %s
                     AND su.status != 'Cancelled'
-                    AND gs.session_schedule > DATE_SUB(%s, INTERVAL 2 HOUR)
-                    AND gs.session_schedule < DATE_ADD(%s, INTERVAL 2 HOUR)
             ) AS current_bookings
         FROM staff s
         WHERE s.staff_id = %s
@@ -652,10 +650,10 @@ def fairway():
                         JOIN golf_session gs ON su.session_id = gs.session_id
                         WHERE su.coach_id = s.staff_id 
                         AND su.status != 'Cancelled'
-                        AND gs.session_schedule > DATE_SUB(%s, INTERVAL 2 HOUR)
-                        AND gs.session_schedule < DATE_ADD(%s, INTERVAL 2 HOUR)
                     ) AS current_bookings
                     FROM staff s
+                    LEFT JOIN session_user su ON s.staff_id = su.coach_id AND su.status != 'Cancelled'
+                    LEFT JOIN golf_session gs ON su.session_id = gs.session_id AND gs.session_schedule = %s
                     WHERE s.staff_id = %s
                 """, (datetime_str, datetime_str, coach_id))
                 
@@ -687,10 +685,10 @@ def fairway():
                         JOIN golf_session gs ON su.session_id = gs.session_id
                         WHERE su.caddie_id = s.staff_id 
                         AND su.status != 'Cancelled'
-                        AND gs.session_schedule > DATE_SUB(%s, INTERVAL 2 HOUR)
-                        AND gs.session_schedule < DATE_ADD(%s, INTERVAL 2 HOUR)
                     ) AS current_bookings
                     FROM staff s
+                    LEFT JOIN session_user su ON s.staff_id = su.caddie_id AND su.status != 'Cancelled'
+                    LEFT JOIN golf_session gs ON su.session_id = gs.session_id AND gs.session_schedule = %s
                     WHERE s.staff_id = %s
                 """, (datetime_str, datetime_str, caddie_id))
                 
@@ -828,10 +826,10 @@ def range():
                         JOIN golf_session gs ON su.session_id = gs.session_id
                         WHERE su.coach_id = s.staff_id 
                         AND su.status != 'Cancelled'
-                        AND gs.session_schedule > DATE_SUB(%s, INTERVAL 2 HOUR)
-                        AND gs.session_schedule < DATE_ADD(%s, INTERVAL 2 HOUR)
                     ) AS current_bookings
                     FROM staff s
+                    LEFT JOIN session_user su ON s.staff_id = su.coach_id AND su.status != 'Cancelled'
+                    LEFT JOIN golf_session gs ON su.session_id = gs.session_id AND gs.session_schedule = %s
                     WHERE s.staff_id = %s
                 """, (datetime_str, datetime_str, coach_id))
                 
