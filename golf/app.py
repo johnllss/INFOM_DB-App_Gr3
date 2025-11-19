@@ -5,6 +5,7 @@ from flask_mysqldb import MySQL
 import MySQLdb.cursors
 from helpers import apology, login_required, admin_required, php
 import pytz
+import uuid
 from datetime import datetime
 import builtins
 import helpers
@@ -942,7 +943,13 @@ def account():
 @login_required
 def history():
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    cur.execute("SELECT * FROM payment WHERE user_id = %s AND status = 'Paid'", (session['user_id'],))
+    
+    cur.execute("""
+        SELECT * FROM payment 
+        WHERE user_id = %s AND status = 'Paid' 
+        ORDER BY date_paid DESC
+    """, (session['user_id'],))
+    
     payments = cur.fetchall()
     cur.close()
 
@@ -966,21 +973,24 @@ def report():
     # TODO: Ronald, Sales Performance Report
     yearly_sales_report = reports.get_yearly_sales_report(mysql)
     # TODO: Gab, Staff Performance Report
-    yearly_staff_report = reports.get_yearly_staff_report(mysql)
-    quarterly_staff_report = reports.get_quarterly_staff_report(mysql)
+    yearly_staff_report = reports.get_yearly_staff_report(mysql, admin_selected_year)
+    quarterly_staff_report = reports.get_quarterly_staff_report(mysql, admin_selected_year)
     
     # TODO: Jerry, Inventory Report
-    inventory_report = reports.get_inventory_report(mysql)
+    inventory_report = reports.get_inventory_report(mysql, admin_selected_year)
 
     # TODO: JL, Customer Value Report
     customer_report = reports.get_customer_value_report(mysql, admin_selected_year)
 
     return render_template("reports.html", 
                            yearly_sales_report=yearly_sales_report,
+                           monthly_sales_report=monthly_sales_report,
                            yearly_staff_report=yearly_staff_report, 
                            quarterly_staff_report=quarterly_staff_report, 
                            inventory_report=inventory_report, 
-                           customer_report=customer_report, selectable_years=selectable_years, admin_selected_year=admin_selected_year)
+                           customer_report=customer_report, 
+                           selectable_years=selectable_years, 
+                           admin_selected_year=admin_selected_year)
 
 @app.route("/checkout_session", methods=["POST"])
 @login_required
@@ -1027,15 +1037,15 @@ def checkout():
 
         try:
             # Process payments modularly
-            
+            transaction_ref = datetime.now().strftime('%Y%m%d') + "-" + str(uuid.uuid4())[:8].upper()
             if checkout_context["membership_fee"] != 0:
                 process.process_membership_payment(cur, user_id, payment_method_enum)
 
             if checkout_context["cart_fee"] != 0:
-                process.process_cart_payment(cur, user_id, checkout_context, payment_method_enum)
+                process.process_cart_payment(cur, user_id, checkout_context, payment_method_enum, transaction_ref)
 
             if checkout_context["session_fee"] != 0:
-                process.process_golf_session_payment(cur, user_id, payment_method_enum)
+                process.process_golf_session_payment(cur, user_id, checkout_context, payment_method_enum, transaction_ref)
 
             process.update_loyalty_points(cur, user_id, checkout_context)
 
@@ -1076,3 +1086,50 @@ def logout():
 
     # Redirect user to login form
     return redirect("/")
+
+def updateSessions():
+    """
+    Update golf session statuses based on current date and time.
+    This function sets past sessions to 'Completed' and updates
+    the status of future sessions based on bookings.
+    """
+
+    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    update_golf_sessions = """
+        UPDATE golf_session
+        SET status = 'Finished'
+        WHERE 
+            status IN ('Ongoing', 'Available', 'Fully Booked')
+            AND session_schedule <= NOW() - INTERVAL 2 HOUR;
+        """
+    cur.execute(update_golf_sessions)
+
+    get_session_users = """
+        SELECT su.session_user_id, gs.type
+        FROM session_user su
+        JOIN golf_session gs ON su.session_id = gs.session_id
+        WHERE 
+            gs.status = 'Finished'
+            AND su.status = 'Confirmed';
+        """
+    cur.execute(get_session_users)
+    session_users = cur.fetchall()
+
+    for session_user_id, session_type in session_users:
+        if session_type == 'Fairway':
+            random_score = random.randint(35, 60)
+            update_session_user_stats = """
+                UPDATE session_user
+                SET score_fairway = %s
+                WHERE user_id = %s;
+                """
+            cur.execute(update_session_user_stats, (random_score, session_user_id))
+        elif session_type == 'Driving Range':
+            random_score = random.randint(180, 260)
+            update_session_user_stats = """
+                UPDATE session_user
+                SET longest_range = %s
+                WHERE user_id = %s;
+                """
+            cur.execute(update_session_user_stats, (random_score, session_user_id))
+
