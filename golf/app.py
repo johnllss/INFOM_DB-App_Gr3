@@ -964,10 +964,10 @@ def report():
     # FETCHING REPORTS SECTION
     # Only admins can reach this point
     # TODO: Ronald, Sales Performance Report
-    yearly_sales_report = reports.get_yearly_sales_report(mysql)
+    yearly_sales_report = reports.get_yearly_sales_report(mysql, admin_selected_year)
     # TODO: Gab, Staff Performance Report
-    yearly_staff_report = reports.get_yearly_staff_report(mysql)
-    quarterly_staff_report = reports.get_quarterly_staff_report(mysql)
+    yearly_staff_report = reports.get_yearly_staff_report(mysql, admin_selected_year)
+    quarterly_staff_report = reports.get_quarterly_staff_report(mysql, admin_selected_year)
     
     # TODO: Jerry, Inventory Report
     inventory_report = reports.get_inventory_report(mysql)
