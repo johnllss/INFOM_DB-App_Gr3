@@ -157,7 +157,8 @@
                         <th>Item Name</th>
                         <th>Total Purchases/Rent</th>
                         <th>Total Revenue</th>
-                        <th>Rental Utilization</th>
+                        <th>Rental/Sale Ratio %</th>
+                        <th>Rental Utilization Rate</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -167,13 +168,27 @@
                             <td>{{ item.Item_Name }}</td>
                             <td>{{ item.Total_Units_Bought }}</td>
                             <td>{{ item.Total_Revenue }}</td>
-                            <td>{{ item.Rent_Percentage }}</td>
+                            <td>{{ item.Rent_Percentage }}%</td>
+                            
+                            <td>
+                                {% if item.Utilization_Rate is not none %}
+                                    <span class="badge 
+                                        {% if item.Utilization_Rate >= 70 %}bg-success
+                                        {% elif item.Utilization_Rate >= 40 %}bg-warning text-dark
+                                        {% else %}bg-danger
+                                        {% endif %}">
+                                        {{ item.Utilization_Rate }}%
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted">N/A</span>
+                                {% endif %}
+                            </td>
                         </tr>
                         {% endfor %}
                     {% else %}
-                    <tr>
-                        <td colspan="4" class="text-center">No inventory data for {{ admin_selected_year }}</td>
-                    </tr>
+                        <tr>
+                            <td colspan="5" class="text-center">No inventory data for {{ admin_selected_year }}</td>
+                        </tr>
                     {% endif %}
                 </tbody>
             </table>
