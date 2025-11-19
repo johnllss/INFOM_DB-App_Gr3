@@ -213,8 +213,7 @@ def get_customer_value_report(mysql, year=None):
                 WHERE YEAR (p.date_paid) = %s AND p.status = 'Paid'
                 GROUP BY p.user_id
     ) AS yearlypayments ON u.user_id = yearlypayments.user_id
-    ORDER BY total_amount_spent DESC;
-    WHERE (yearlysessions.total_sessions IS NOT NULL AND yearlysessions.total_sessions > 0) OR (yearlypayments.total_spent IS NOT NULL AND yearly_payments.total_spent > 0)
+    WHERE (yearlysessions.total_sessions IS NOT NULL AND yearlysessions.total_sessions > 0) OR (yearlypayments.total_spent IS NOT NULL AND yearlypayments.total_spent > 0)
     ORDER BY total_amount_spent DESC;
     """
     try:
