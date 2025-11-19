@@ -457,6 +457,20 @@ def check_session_status():
     
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
 
+    # check if current user already has a booking at this time
+    cur.execute("""
+        SELECT su.status
+        FROM session_user su
+        JOIN golf_session gs ON su.session_id = gs.session_id
+        WHERE su.user_id = %s AND gs.session_schedule = %s AND su.status != 'Cancelled'
+    """, (session["user_id"], datetime_str))
+    user_booking = cur.fetchone()
+
+    # if user already booked this time slot, show already booked
+    if user_booking:
+        cur.close()
+        return {"status": "Already Booked"}
+
     if session_type == 'Fairway':
         cur.execute("""
             SELECT status FROM golf_session 
