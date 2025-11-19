@@ -5,6 +5,7 @@ from flask_mysqldb import MySQL
 import MySQLdb.cursors
 from helpers import apology, login_required, admin_required, php
 import pytz
+import uuid
 from datetime import datetime
 import builtins
 import helpers
@@ -942,7 +943,13 @@ def account():
 @login_required
 def history():
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    cur.execute("SELECT * FROM payment WHERE user_id = %s AND status = 'Paid'", (session['user_id'],))
+    
+    cur.execute("""
+        SELECT * FROM payment 
+        WHERE user_id = %s AND status = 'Paid' 
+        ORDER BY date_paid DESC
+    """, (session['user_id'],))
+    
     payments = cur.fetchall()
     cur.close()
 
@@ -1025,15 +1032,15 @@ def checkout():
 
         try:
             # Process payments modularly
-            
+            transaction_ref = datetime.now().strftime('%Y%m%d') + "-" + str(uuid.uuid4())[:8].upper()
             if checkout_context["membership_fee"] != 0:
                 process.process_membership_payment(cur, user_id, payment_method_enum)
 
             if checkout_context["cart_fee"] != 0:
-                process.process_cart_payment(cur, user_id, checkout_context, payment_method_enum)
+                process.process_cart_payment(cur, user_id, checkout_context, payment_method_enum, transaction_ref)
 
             if checkout_context["session_fee"] != 0:
-                process.process_golf_session_payment(cur, user_id, payment_method_enum)
+                process.process_golf_session_payment(cur, user_id, checkout_context, payment_method_enum, transaction_ref)
 
             process.update_loyalty_points(cur, user_id, checkout_context)
 

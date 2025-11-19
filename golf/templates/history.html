@@ -7,25 +7,78 @@
 {% block main %}
     <div class="container">
         <h1 class="my-5"><strong>Purchase History</strong></h1>
-        <table>
-            <thead>
-                <tr>
-                    <th>Price</th>
-                    <th>Payment Method</th>
-                    <th>Discount Applied</th>
-                    <th>Transacted</th>
-                </tr>
-            </thead>
-            <tbody>
-                    {% for payment in payments %}
-                    <tr>
-                        <td>{{ payment.total_price | php }}</td>
-                        <td>{{ payment.payment_method }}</td>
-                        <td>{{ payment.discount_applied }}</td>
-                        <td>{{ payment.date_paid }}</td>
-                    </tr>
-                    {% endfor %}
-            </tbody>
-        </table>
+
+        {% for date, transaction_items in payments | groupby('transaction_ref') | reverse %}
+            
+            {% set transaction_total = transaction_items | sum(attribute='total_price') %}
+            
+            <div class="card shadow-sm mb-4 border-0">
+                <div class="card-header text-white d-flex justify-content-between align-items-center px-4 py-3" style="background-color: #2e8b57;">
+                    <div>
+                        <div class="small opacity-75">Transaction Date</div>
+                        <div class="fw-bold fs-5">{{ date }}</div>
+                    </div>
+                    <div class="text-end">
+                        <div class="small opacity-75">Total Paid</div>
+                        <div class="fw-bold fs-4">{{ transaction_total | php }}</div>
+                    </div>
+                </div>
+
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="table-light text-muted small">
+                            <tr>
+                                <th class="ps-4">Item Type</th>
+                                <th>Payment Method</th>
+                                <th class="text-end">Discount</th>
+                                <th class="text-end pe-4">Price</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in transaction_items %}
+                            <tr>
+                                <td class="ps-4 fw-semibold">
+                                    {% if item.cart_id %}
+                                        <span class="badge bg-primary me-2">Shop</span> Cart Purchase
+                                    {% elif item.session_user_id %}
+                                        <span class="badge bg-warning text-dark me-2">Golf</span> Session Booking
+                                    {% else %}
+                                        <span class="badge bg-success me-2">Member</span> Subscription
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if item.payment_method == 'GCash' %}
+                                        <span class="text-primary fw-bold">GCash</span>
+                                    {% elif item.payment_method == 'Cash' %}
+                                        <span class="text-success fw-bold">Cash</span>
+                                    {% else %}
+                                        <span class="text-secondary fw-bold">Credit Card</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end text-danger">
+                                    {% if item.discount_applied > 0 %}
+                                        -{{ item.discount_applied | php }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td class="text-end fw-bold pe-4">
+                                    {{ item.total_price | php }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-footer bg-light text-muted small text-end px-4">
+                    Paid via {{ transaction_items[0].payment_method }}
+                </div>
+            </div>
+        {% else %}
+            <div class="alert alert-info text-center">
+                No purchase history found.
+            </div>
+        {% endfor %}
+
     </div>
 {% endblock %}

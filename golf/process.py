@@ -238,12 +238,33 @@ def process_membership_payment(cur, user_id, payment_method_enum):
                 (total_price, payment_method_enum, user_id))
     # TODO cart_id and session_user_id might need to be extracted
 
-def process_cart_payment(cur, user_id, checkout_context, payment_method_enum):
+def process_cart_payment(cur, user_id, checkout_context, payment_method_enum, transaction_ref):
     cur.execute("SELECT cart_id FROM cart WHERE status = 'active' AND user_id = %s", (user_id,))
     active_cart = cur.fetchone()
     
     if not active_cart:
         return
+
+    cart_gross_price = checkout_context["cart_fee"]
+    
+    # 2. Calculate the Membership Discount portion for the cart
+    discount_percent = Decimal(checkout_context["discount_percent"])
+    cart_member_discount = cart_gross_price * (discount_percent / Decimal('100.0'))
+
+    # 3. Calculate the Loyalty Point portion (Pro-rated based on price)
+    # Formula: (Cart Price / Total Discountable Price) * Total Loyalty Points Used
+    discountable_total = checkout_context["cart_fee"] + checkout_context["session_fee"]
+    cart_loyalty_discount = Decimal('0.0')
+    
+    if discountable_total > 0:
+        ratio = cart_gross_price / discountable_total
+        cart_loyalty_discount = checkout_context["loyalty_points_discount"] * ratio
+
+    # 4. Total Discount for this specific cart
+    total_cart_discount = cart_member_discount + cart_loyalty_discount
+
+    # 5. Final Amount Paid (Gross - Discount)
+    final_cart_price = cart_gross_price - total_cart_discount
     
     # UPSERT
     cur.execute("SELECT payment_id FROM payment WHERE cart_id = %s", (active_cart['cart_id'],))
@@ -252,23 +273,21 @@ def process_cart_payment(cur, user_id, checkout_context, payment_method_enum):
     if existing_payment:
         cur.execute("""
             UPDATE payment 
-            SET status = 'Paid', date_paid = NOW(), payment_method = %s, total_price = %s
+            SET status = 'Paid', date_paid = NOW(), payment_method = %s, total_price = %s, discount_applied = %s
             WHERE payment_id = %s
-        """, (payment_method_enum, checkout_context["cart_fee"], existing_payment['payment_id']))
+        """, (payment_method_enum, final_cart_price, total_cart_discount, existing_payment['payment_id']))
     else:
         cur.execute("""
-            INSERT INTO payment (total_price, date_paid, payment_method, status, discount_applied, user_id, cart_id, session_user_id) 
-            VALUES (%s, NOW(), %s, 'Paid', 0.00, %s, %s, NULL)
-        """, (checkout_context["cart_fee"], payment_method_enum, user_id, active_cart['cart_id']))
+            INSERT INTO payment (total_price, date_paid, payment_method, status, discount_applied, user_id, cart_id, session_user_id, transaction_ref) 
+            VALUES (%s, NOW(), %s, 'Paid', %s, %s, %s, NULL, %s)
+        """, (final_cart_price, payment_method_enum, total_cart_discount, user_id, active_cart['cart_id']), transaction_ref)
 
-    # Archive the Old Cart
+    # Archive Old Cart & Create New
     cur.execute("UPDATE cart SET status = 'archived' WHERE cart_id = %s", (active_cart['cart_id'],))
-    
-    # Create a NEW Empty Cart
     cur.execute("INSERT INTO cart (user_id, total_price, status) VALUES (%s, 0, 'active')", (user_id,))
     
 
-def process_golf_session_payment(cur, user_id, payment_method_enum):
+def process_golf_session_payment(cur, user_id, checkout_context, payment_method_enum, transaction_ref):
     checkout_details = session.get("checkout_details", {})
     checkout_type = checkout_details.get("type")
 
@@ -290,11 +309,15 @@ def process_golf_session_payment(cur, user_id, payment_method_enum):
 
     if not pending_sessions: return
 
+    discountable_total = checkout_context["cart_fee"] + checkout_context["session_fee"]
+    discount_percent = Decimal(checkout_context["discount_percent"])
+    total_loyalty_discount = checkout_context["loyalty_points_discount"]
+
     for sess in pending_sessions:
         s_id = sess['session_user_id']
         
         # Recalculate exact price for this session
-        ind_price = Decimal('0.0')
+        ind_gross_price = Decimal('0.0')
         cur.execute("""SELECT gs.session_price FROM session_user su 
                        JOIN golf_session gs ON su.session_id = gs.session_id 
                        WHERE su.session_user_id = %s""", (s_id,))
@@ -313,20 +336,31 @@ def process_golf_session_payment(cur, user_id, payment_method_enum):
              s = cur.fetchone()
              if s: ind_price += Decimal(s['service_fee'])
 
+        sess_member_discount = ind_gross_price * (discount_percent / Decimal('100.0'))
+
+        sess_loyalty_discount = Decimal('0.0')
+        if discountable_total > 0:
+            ratio = ind_gross_price / discountable_total
+            sess_loyalty_discount = total_loyalty_discount * ratio
+
+        total_sess_discount = sess_member_discount + sess_loyalty_discount
+
+        final_sess_price = ind_gross_price - total_sess_discount
+
         # UPSERT Payment
         cur.execute("SELECT payment_id FROM payment WHERE session_user_id = %s", (s_id,))
         existing_payment = cur.fetchone()
 
         if existing_payment:
             cur.execute("""
-                UPDATE payment SET status='Paid', date_paid=NOW(), payment_method=%s, total_price=%s 
+                UPDATE payment SET status='Paid', date_paid=NOW(), payment_method=%s, total_price=%s, discount_applied=%s
                 WHERE payment_id=%s
-            """, (payment_method_enum, ind_price, existing_payment['payment_id']))
+            """, (payment_method_enum, final_sess_price, total_sess_discount, existing_payment['payment_id']))
         else:
             cur.execute("""
-                INSERT INTO payment (total_price, date_paid, payment_method, status, discount_applied, user_id, session_user_id) 
-                VALUES (%s, NOW(), %s, 'Paid', 0, %s, %s)
-            """, (ind_price, payment_method_enum, user_id, s_id))
+                INSERT INTO payment (total_price, date_paid, payment_method, status, discount_applied, user_id, session_user_id, transaction_ref) 
+                VALUES (%s, NOW(), %s, 'Paid', %s, %s, %s, %s)
+            """, (final_sess_price, payment_method_enum, user_id, total_sess_discount, s_id, transaction_ref))
 
         cur.execute("UPDATE session_user SET status = 'Confirmed' WHERE session_user_id = %s", (s_id,))
 
