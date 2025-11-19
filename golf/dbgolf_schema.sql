@@ -2,7 +2,7 @@ CREATE DATABASE IF NOT EXISTS `golf_db` DEFAULT CHARACTER SET utf8mb4 COLLATE ut
 USE `golf_db`;
 
 -- ==========================================
--- 1. STANDALONE TABLES (Create these first)
+-- 1. STANDALONE TABLES
 -- ==========================================
 
 -- Table structure for table `user`
@@ -54,7 +54,7 @@ CREATE TABLE `golf_session` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- ==========================================
--- 2. DEPENDENT TABLES (Create these next)
+-- 2. DEPENDENT TABLES
 -- ==========================================
 
 -- Table structure for table `cart`
@@ -116,12 +116,10 @@ CREATE TABLE `payment` (
   `date_paid` datetime DEFAULT NULL,
   `payment_method` enum('Cash','GCash','Credit Card') NOT NULL,
   `status` enum('Pending','Paid') NOT NULL,
-  -- FIXED: Increased precision to avoid crashes on high discounts
   `discount_applied` decimal(10,2) DEFAULT '0.00', 
   `user_id` int NOT NULL,
   `cart_id` int DEFAULT NULL,
   `session_user_id` int DEFAULT NULL,
-  -- FIXED: Added transaction_ref for grouping history
   `transaction_ref` varchar(100) DEFAULT NULL,
   PRIMARY KEY (`payment_id`),
   KEY `fk_payment_cart` (`cart_id`),
@@ -131,3 +129,32 @@ CREATE TABLE `payment` (
   CONSTRAINT `fk_payment_session_user` FOREIGN KEY (`session_user_id`) REFERENCES `session_user` (`session_user_id`) ON DELETE SET NULL,
   CONSTRAINT `fk_payment_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`user_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+SET GLOBAL event_scheduler = ON;
+
+DROP EVENT IF EXISTS change_to_ongoing;
+
+DELIMITER $$
+
+CREATE EVENT change_to_ongoing
+ON SCHEDULE EVERY 1 MINUTE
+STARTS NOW()
+DO
+BEGIN
+    -- 1. Start sessions that have reached their time
+    UPDATE golf_session
+    SET status = 'Ongoing'
+    WHERE 
+        status IN ('Available', 'Fully Booked') 
+        AND session_schedule <= NOW();
+        
+    -- 2. Finish sessions that started 4 hours ago (Optional Cleanup)
+    -- Assuming a golf session lasts roughly 4 hours
+    UPDATE golf_session
+    SET status = 'Finished'
+    WHERE 
+        status = 'Ongoing'
+        AND session_schedule <= DATE_SUB(NOW(), INTERVAL 4 HOUR);
+END $$
+
+DELIMITER ;
