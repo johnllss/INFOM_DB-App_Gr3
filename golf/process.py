@@ -294,7 +294,6 @@ def process_cart_payment(cur, user_id, checkout_context, payment_method_enum, tr
                     item["price"]
                     ))
         
-    mysql.connection.commit()
 
     # Archive the Old Cart
     cur.execute("UPDATE cart SET status = 'archived' WHERE cart_id = %s", (active_cart['cart_id'],))
