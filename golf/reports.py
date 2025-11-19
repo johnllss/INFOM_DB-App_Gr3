@@ -140,7 +140,7 @@ def get_inventory_report(mysql):
 
     query = """
     SELECT
-        i.name AS Item_Name,
+        i.name,
         SUM(i.quantity) AS Total_Units_Bought,
         SUM(i.quantity * i.price) AS Total_Revenue,
         ROUND(
@@ -149,7 +149,7 @@ def get_inventory_report(mysql):
         ) AS Rent_Percentage
     FROM
         item i
-    JOIN
+    LEFT JOIN
         cart c ON i.cart_id = c.cart_id
     WHERE
         c.status = 'archived'
