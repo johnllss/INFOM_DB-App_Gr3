@@ -141,18 +141,25 @@ def get_inventory_report(mysql):
     query = """
     SELECT
         i.name,
-        SUM(i.quantity) AS Total_Units_Bought,
-        SUM(i.quantity * i.price) AS Total_Revenue,
+        SUM(CASE WHEN c.status = 'archived' THEN i.quantity ELSE 0 END) AS Total_Units_Bought,
+        SUM(CASE WHEN c.status = 'archived' THEN i.quantity * i.price ELSE 0 END) AS Total_Revenue,
         ROUND(
-            (SUM(CASE WHEN i.type = 'rent' THEN i.quantity ELSE 0 END) / SUM(i.quantity)) * 100, 
-            2
-        ) AS Rent_Percentage
+            IF(
+            -- Condition: Check if total units bought is greater than 0
+            SUM(CASE WHEN c.status = 'archived' THEN i.quantity ELSE 0 END) > 0,
+            
+            -- True (perform calculation): (Rent Quantity / Total Quantity) * 100
+            (SUM(CASE WHEN i.type = 'rent' AND c.status = 'archived' THEN i.quantity ELSE 0 END) / 
+             SUM(CASE WHEN c.status = 'archived' THEN i.quantity ELSE 0 END)) * 100,
+            
+            -- False (set to 0): If the total is 0, the percentage must be 0
+            0
+            ), 
+        2) AS Rent_Percentage
     FROM
         item i
     LEFT JOIN
         cart c ON i.cart_id = c.cart_id
-    WHERE
-        c.status = 'archived'
     GROUP BY
         i.name
     ORDER BY

@@ -261,11 +261,25 @@ def process_cart_payment(cur, user_id, checkout_context, payment_method_enum):
             VALUES (%s, NOW(), %s, 'Paid', 0.00, %s, %s, NULL)
         """, (checkout_context["cart_fee"], payment_method_enum, user_id, active_cart['cart_id']))
 
+    cur.execute("SELECT * FROM item WHERE cart_id = %s", (active_cart["cart_id"],))
+    old_items = cur.fetchall()
+
+    for item in old_items:
+        cur.execute("""INSERT INTO item (name, category, price) 
+                       VALUES (%s, %s, %s, %s)""", 
+                    (
+                    item["name"], 
+                    item["category"], 
+                    item["price"]
+                    ))
+        
+    mysql.connection.commit()
+
     # Archive the Old Cart
     cur.execute("UPDATE cart SET status = 'archived' WHERE cart_id = %s", (active_cart['cart_id'],))
     
     # Create a NEW Empty Cart
-    cur.execute("INSERT INTO cart (user_id, total_price, status) VALUES (%s, 0, 'active')", (user_id,))
+    cur.execute("INSERT INTO cart (user_id) VALUES (%s)", (user_id,))
     
 
 def process_golf_session_payment(cur, user_id, payment_method_enum):
