@@ -6,7 +6,7 @@ import MySQLdb.cursors
 from helpers import apology, login_required, admin_required, php
 import pytz
 from datetime import datetime
-
+import builtins
 import helpers
 import process
 import reports
@@ -828,9 +828,6 @@ def history():
 @login_required
 @admin_required
 def report():
-    import builtins # used to explicitly use python's built-in range()
-    from datetime import datetime
-
     # extracting year from user input
     admin_selected_year = request.args.get('year', type=int)
     if admin_selected_year is None:
@@ -840,7 +837,7 @@ def report():
     current_year = datetime.now().year
     selectable_years = list(builtins.range(current_year, current_year - 10, -1))
 
-# FETCHING REPORTS SECTION
+    # FETCHING REPORTS SECTION
     # Only admins can reach this point
     # TODO: Ronald, Sales Performance Report
     yearly_sales_report = reports.get_yearly_sales_report(mysql)

@@ -163,27 +163,16 @@ def load_checkout_context(cur, user_id):
     return checkout_context
 
 def get_user_discount(cur, user_id):
-    # Get necessary values for processing
     cur.execute("SELECT membership_tier, membership_end FROM user WHERE user_id = %s", (user_id,))
     user = cur.fetchone()
-
-    # 0 discount if not a user or membership_end is empty
-    if not user or not user['membership_end']:
-        return 0.0
     
-    # 0 discount if membership has ended
-    if user['membership_end'] < datetime.now().date():
-        return 0.0
-    
-    # Retrieve tier and 0 discount if not in system-specified tiers
-    membership_tier = user['membership_tier']
-    if membership_tier not in MEMBERSHIPS:
-        return 0.0
+    if not user or not user['membership_end']: return 0.0
+    if user['membership_end'] < datetime.now().date(): return 0.0
+    if user['membership_tier'] not in MEMBERSHIPS: return 0.0
 
-    # Extract discount through membership_tier
-    return MEMBERSHIPS[membership_tier]['discount']
+    return MEMBERSHIPS[user['membership_tier']]['discount']
 
-def validate_payment_method(payment_method):
+def validate_payment_method(payment_method, form_data):
     method, message = None, None
 
     if payment_method == "cash":
@@ -194,14 +183,8 @@ def validate_payment_method(payment_method):
         message = "Your balance in GCash has been deducted from your payment."
     elif payment_method == "card":
         method = "Credit Card"
-        card_name = request.form.get("name")
-        card_number = request.form.get("c_num")
-        expiry_date = request.form.get("exp_date")
-        cvv = request.form.get("cvv")
-
-        # TODO Card info validation
-
-        if not (card_name and card_number and expiry_date and cvv):
+        required_fields = ["name", "c_num", "exp_date", "cvv"]
+        if not all(field in form_data and form_data[field] for field in required_fields):
             return None, "Fill in the complete card details."
 
         message = "Your balance in your card has been deducted from your payment."
@@ -279,152 +262,117 @@ def process_membership_payment(cur, user_id):
                 (total_price, payment_method_enum, user_id))
     # TODO cart_id and session_user_id might need to be extracted
 
-# TODO: Jerry
-def process_cart_payment(cur, user_id, payment_method_enum):
-
-    cur.execute("SELECT * FROM cart WHERE status = 'active' AND user_id = %s", (user_id,))
-    old_cart = cur.fetchone()
+def process_cart_payment(cur, user_id, checkout_context):
+    cur.execute("SELECT cart_id FROM cart WHERE status = 'active' AND user_id = %s", (user_id,))
+    active_cart = cur.fetchone()
     
-    if not old_cart:
+    if not active_cart:
         return
 
-    cur.execute("SELECT * FROM item WHERE cart_id = %s", (old_cart["cart_id"],))
-    old_items = cur.fetchall()
+    payment_method_req = request.form.get("method")
+    payment_method_enum, _ = validate_payment_method(payment_method_req, request.form)
+    
+    # UPSERT
+    cur.execute("SELECT payment_id FROM payment WHERE cart_id = %s", (active_cart['cart_id'],))
+    existing_payment = cur.fetchone()
 
-    cur.execute("UPDATE cart SET status = 'archived' WHERE cart_id = %s", (old_cart["cart_id"],))
+    if existing_payment:
+        cur.execute("""
+            UPDATE payment 
+            SET status = 'Paid', date_paid = NOW(), payment_method = %s, total_price = %s
+            WHERE payment_id = %s
+        """, (payment_method_enum, checkout_context["cart_fee"], existing_payment['payment_id']))
+    else:
+        cur.execute("""
+            INSERT INTO payment (total_price, date_paid, payment_method, status, discount_applied, user_id, cart_id, session_user_id) 
+            VALUES (%s, NOW(), %s, 'Paid', 0.00, %s, %s, NULL)
+        """, (checkout_context["cart_fee"], payment_method_enum, user_id, active_cart['cart_id']))
 
-
-    cur.execute("INSERT INTO cart (user_id) VALUES (%s)", (user_id,))
-
-    for item in old_items:
-        cur.execute("""INSERT INTO item (name, category, type, price) 
-                       VALUES (%s, %s, %s, %s)""", 
-                    (
-                    item["name"], 
-                    item["category"], 
-                    item["type"], 
-                    item["price"]
-                    ))
-
-    cur.execute("""
-                INSERT INTO payment (total_price, date_paid, payment_method, status, discount_applied, user_id, cart_id, session_user_id) 
-                VALUES (%s, NOW(), %s, 'Paid', 0.00, %s, %s, NULL)""",
-                (old_cart["total_price"], payment_method_enum, user_id, old_cart["cart_id"]))
+    # Archive the Old Cart
+    cur.execute("UPDATE cart SET status = 'archived' WHERE cart_id = %s", (active_cart['cart_id'],))
+    
+    # Create a NEW Empty Cart
+    cur.execute("INSERT INTO cart (user_id, total_price, status) VALUES (%s, 0, 'active')", (user_id,))
     
 
-# TODO: Ronald
-def process_golf_session_payment(cur, user_id, checkout_context, payment_method_enum):
-    checkout_details = session.get("checkout_details", {})
+def process_golf_session_payment(cur, user_id, checkout_context):
+    # Filter logic: Are we paying for ONE session or ALL pending?
+    target_id = session.get("single_checkout_id")
+    
+    query = "SELECT session_user_id, coach_id, caddie_id, buckets FROM session_user WHERE user_id = %s AND status = 'Pending'"
+    params = [user_id]
+    
+    if target_id:
+        query += " AND session_user_id = %s"
+        params.append(target_id)
 
-    if checkout_details.get("type") == "single_session":
-        # process only ONE session checkout
-        session_user_id = checkout_details.get("session_user_id")
+    cur.execute(query, tuple(params))
+    pending_sessions = cur.fetchall()
 
-        # update session_user status to 'Confirmed'
-        cur.execute("""
-            UPDATE session_user 
-            SET status = 'Confirmed' 
-            WHERE session_user_id = %s AND user_id = %s
-        """, (session_user_id, user_id))
+    if not pending_sessions:
+        return
 
-        cur.execute("""
-            INSERT INTO payment(total_price, date_paid, payment_method, status, discount_applied, user_id, cart_id, session_user_id)
-            VALUES (%s, NOW(), %s, 'Paid', %s, %s, NULL, %s)
-        """, (checkout_context["session_fee"], payment_method_enum, checkout_context["discount_amount"], user_id, session_user_id))
+    payment_method_req = request.form.get("method")
+    payment_method_enum, _ = validate_payment_method(payment_method_req, request.form)
 
-    elif checkout_details.get("type") == "all_sessions":
-        # get all pending session_user_id's
-        cur.execute("""
-            SELECT su.session_user_id, su.coach_id, su.caddie_id, su.buckets, gs.session_price
-            FROM session_user su
-            JOIN golf_session gs ON su.session_id = gs.session_id
-            WHERE su.user_id = %s AND su.status = 'Pending'
-        """, (user_id,))
-        all_pending_sessions = cur.fetchall()
-
-        if not all_pending_sessions:
-            return
+    for sess in pending_sessions:
+        s_id = sess['session_user_id']
+        individual_price = Decimal('0.0')
         
-        # total for discount distribution
-        total_before_discount = checkout_context["session_fee"] + checkout_context["discount_amount"]
+        # Base price
+        cur.execute("""SELECT gs.session_price FROM session_user su 
+                       JOIN golf_session gs ON su.session_id = gs.session_id 
+                       WHERE su.session_user_id = %s""", (s_id,))
+        base = cur.fetchone()
+        if base: individual_price += Decimal(base['session_price'])
+        
+        # Buckets
+        if sess['buckets']: individual_price += Decimal(sess['buckets'] * 300)
+        
+        # Staff
+        if sess['coach_id']:
+             cur.execute("SELECT service_fee FROM staff WHERE staff_id = %s", (sess['coach_id'],))
+             s = cur.fetchone()
+             if s: individual_price += Decimal(s['service_fee'])
 
-        # process each session individually
-        for pending_session in all_pending_sessions:
-            session_user_id = pending_session["session_user_id"]
+        if sess['caddie_id']:
+             cur.execute("SELECT service_fee FROM staff WHERE staff_id = %s", (sess['caddie_id'],))
+             s = cur.fetchone()
+             if s: individual_price += Decimal(s['service_fee'])
 
-            # calculate individual session price
-            individual_price = Decimal('0.0')
-            individual_staff_price = Decimal('0.0')
+        # UPSERT
+        cur.execute("SELECT payment_id FROM payment WHERE session_user_id = %s", (s_id,))
+        existing_payment = cur.fetchone()
 
-            # base session price
-            individual_price += pending_session["session_price"]
-
-            # bucket fees
-            if pending_session["buckets"] and pending_session["buckets"] > 0:
-                individual_price += Decimal(pending_session["buckets"] * 300)
-
-            # coach fee
-            if pending_session["coach_id"]:
-                cur.execute("SELECT service_fee FROM staff WHERE staff_id = %s", (pending_session["coach_id"],))
-                staff_fee = cur.fetchone()
-                if staff_fee:
-                    individual_staff_price += staff_fee["service_fee"]
-
-            # caddie fee
-            if pending_session["caddie_id"]:
-                cur.execute("SELECT service_fee FROM staff WHERE staff_id = %s", (pending_session["caddie_id"],))
-                staff_fee = cur.fetchone()
-                if staff_fee:
-                    individual_staff_price += staff_fee["service_fee"]
-
-            # total for this session
-            individual_total = individual_price + individual_staff_price
-
-            # calculate proportional discount for this session
-            if total_before_discount > 0:
-                discount_ratio = individual_total / total_before_discount
-                individual_discount = checkout_context["discount_amount"] * discount_ratio
-            else:
-                individual_discount = Decimal('0.0')
-
-            # final price after discount
-            final_individual_price = individual_total - individual_discount
-
-            # update all sessions to Confirmed
+        if existing_payment:
             cur.execute("""
-                UPDATE session_user 
-                SET status = 'Confirmed' 
-                WHERE session_user_id = %s
-            """, (session_user_id,))
-
-            # create individual payment record for this session
+                UPDATE payment 
+                SET status = 'Paid', date_paid = NOW(), payment_method = %s, total_price = %s
+                WHERE payment_id = %s
+            """, (payment_method_enum, individual_price, existing_payment['payment_id']))
+        else:
             cur.execute("""
-                INSERT INTO payment (total_price, date_paid, payment_method, status, discount_applied, user_id, cart_id, session_user_id)
-                VALUES (%s, NOW(), %s, 'Paid', %s, %s, NULL, %s)
-            """, (final_individual_price, payment_method_enum, individual_discount, user_id, session_user_id))
+                INSERT INTO payment (total_price, date_paid, payment_method, status, discount_applied, user_id, cart_id, session_user_id) 
+                VALUES (%s, NOW(), %s, 'Paid', 0.00, %s, NULL, %s)
+            """, (individual_price, payment_method_enum, user_id, s_id))
 
-    return
+        # Update Session Status
+        cur.execute("UPDATE session_user SET status = 'Confirmed' WHERE session_user_id = %s", (s_id,))
 
 def update_loyalty_points(cur, user_id, checkout_context):
-    # get points earned from total paid in the transaction
     payment_total = checkout_context["total"]
-    points_earned = int(payment_total/10)
-
-    # extract loyalty points used in the transaction
+    points_earned = int(payment_total / 10)
+    
     loyalty_points_used = session.get("loyalty_points_to_use", 0)
-
-    # update user's loyalty points balance
-    net_loyalty_points = points_earned - loyalty_points_used # net change in loyalty points
-
-    # actual updating
+    
+    net_change = points_earned - loyalty_points_used
+    
     cur.execute("""
-                UPDATE user 
-                SET loyalty_points = loyalty_points + %s 
-                WHERE user_id = %s""", 
-                (net_loyalty_points, user_id))
-
-    return
+        UPDATE user 
+        SET loyalty_points = GREATEST(0, loyalty_points + %s) 
+        WHERE user_id = %s
+    """, (net_change, user_id))
 
 def cleanup_checkout_session(session):
-    for key in ["checkout_details", "loyalty_points_to_use"]:
+    for key in ["checkout_details", "loyalty_points_to_use", "single_checkout_id"]:
         session.pop(key, None)

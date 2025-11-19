@@ -65,8 +65,11 @@ def get_yearly_sales_report(mysql):
         return []
     pass
 
-# TODO: Gab, Staff Performance Report
-def get_yearly_staff_report(mysql):
+def get_yearly_staff_report(mysql, year=None):
+    if year is None:
+        from datetime import datetime
+        year = datetime.now().year
+
     query = """
     SELECT
         s.staff_id,
@@ -80,14 +83,16 @@ def get_yearly_staff_report(mysql):
         session_user su ON s.staff_id = su.coach_id OR s.staff_id = su.caddie_id
     JOIN
         golf_session gs ON su.session_id = gs.session_id
+    WHERE
+        YEAR(gs.session_schedule) = %s
     GROUP BY
         s.staff_id, s.name, s.role, session_year
     ORDER BY
-        session_year DESC, total_sessions DESC;
+        total_sessions DESC;
     """
     try:
         cur = mysql.connection.cursor()
-        cur.execute(query)
+        cur.execute(query, (year,))
         report = cur.fetchall()
         cur.close()
         return report
@@ -95,7 +100,11 @@ def get_yearly_staff_report(mysql):
         print(f"Error fetching yearly staff report: {e}")
         return []
 
-def get_quarterly_staff_report(mysql):
+def get_quarterly_staff_report(mysql, year=None):
+    if year is None:
+        from datetime import datetime
+        year = datetime.now().year
+
     query = """
     SELECT
         s.staff_id,
@@ -109,6 +118,8 @@ def get_quarterly_staff_report(mysql):
         session_user su ON s.staff_id = su.coach_id OR s.staff_id = su.caddie_id
     JOIN
         golf_session gs ON su.session_id = gs.session_id
+    WHERE
+        YEAR(gs.session_schedule) = %s
     GROUP BY
         s.staff_id, s.name, s.role, session_quarter
     ORDER BY
@@ -116,7 +127,7 @@ def get_quarterly_staff_report(mysql):
     """
     try:
         cur = mysql.connection.cursor()
-        cur.execute(query)
+        cur.execute(query, (year,))
         report = cur.fetchall()
         cur.close()
         return report
