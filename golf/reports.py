@@ -238,14 +238,22 @@ def get_inventory_report(mysql, year=None):
         item i
     JOIN
         cart c ON i.cart_id = c.cart_id
+    JOIN
+        payment p ON c.cart_id = p.cart_id
+    WHERE
+        c.status = 'archived'
+        AND p.status = 'Paid'
+        AND YEAR(p.date_paid) = %s
     GROUP BY
-        i.name, i.type
+        i.name
+    HAVING
+        Total_Units_Bought > 0
     ORDER BY
         Total_Units_Bought DESC;
     """
     try:
         cur = mysql.connection.cursor()
-        cur.execute(query)
+        cur.execute(query, (year,))
         report = cur.fetchall()
         cur.close()
         return report
