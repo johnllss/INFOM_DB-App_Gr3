@@ -119,7 +119,7 @@
             </table>
         </div>
 
-        <h2 class="mt-5">Inventory Report</h2>
+        <h2 class="mt-5">Inventory Report ({{ admin_selected_year }})</h2>
         <div class="table-responsive">
             <table class="table table-striped table-hover">
                 <thead class="text-white" style="background-color: #2e944b;">
@@ -127,20 +127,24 @@
                         <th>Item Name</th>
                         <th>Total Purchases/Rent</th>
                         <th>Total Revenue</th>
-                        <th>Avergae Utilization</th>
+                        <th>Rental Utilization</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for item in inventory_report %}
-                    <tr>
-                        <td>{{ item.name }}</td>
-                        <td>{{ item.Total_Units_Bought }}</td>
-                        <td>{{ item.Total_Revenue }}</td>
-                        <td>{{ item.Rent_Percentage }}</td>
-                    </tr>
+                    {% if inventory_report %}
+                        {% for item in inventory_report %}
+                        <tr>
+                            <td>{{ item.Item_Name }}</td>
+                            <td>{{ item.Total_Units_Bought }}</td>
+                            <td>{{ item.Total_Revenue }}</td>
+                            <td>{{ item.Rent_Percentage }}</td>
+                        </tr>
+                        {% endfor %}
                     {% else %}
-                    <tr><td colspan="4" class="text-center">No items in Inventory</td></tr>
-                    {% endfor %}
+                    <tr>
+                        <td colspan="4" class="text-center">No inventory data for {{ admin_selected_year }}</td>
+                    </tr>
+                    {% endif %}
                 </tbody>
             </table>
         </div>

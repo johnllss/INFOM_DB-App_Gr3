@@ -140,23 +140,30 @@ def get_quarterly_staff_report(mysql, year=None):
         return []
 
 # TODO: Jerry, Inventory Report
-def get_inventory_report(mysql):
+def get_inventory_report(mysql, year=None):
+    if year is None:
+        from datetime import datetime
+        year = datetime.now().year
 
     query = """
     SELECT
-        i.name,
+        i.name as Item_Name,
         SUM(i.quantity) AS Total_Units_Bought,
         SUM(i.quantity * i.price) AS Total_Revenue,
         ROUND(
-            (SUM(CASE WHEN i.type = 'rent' THEN i.quantity ELSE 0 END) / SUM(i.quantity)) * 100, 
+            (SUM(CASE WHEN i.type = 'Rental' THEN i.quantity ELSE 0 END) / NULLIF(SUM(i.quantity), 0)) * 100, 
             2
         ) AS Rent_Percentage
     FROM
         item i
-    LEFT JOIN
+    JOIN
         cart c ON i.cart_id = c.cart_id
+    JOIN
+        payment p ON c.cart_id = p.cart_id
     WHERE
         c.status = 'archived'
+        AND p.status = 'Paid'
+        AND YEAR(p.date_paid) = %s
     GROUP BY
         i.name
     ORDER BY
@@ -164,7 +171,7 @@ def get_inventory_report(mysql):
     """
     try:
         cur = mysql.connection.cursor()
-        cur.execute(query)
+        cur.execute(query, (year,))
         report = cur.fetchall()
         cur.close()
         return report

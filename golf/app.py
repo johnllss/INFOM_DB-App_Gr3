@@ -977,7 +977,7 @@ def report():
     quarterly_staff_report = reports.get_quarterly_staff_report(mysql, admin_selected_year)
     
     # TODO: Jerry, Inventory Report
-    inventory_report = reports.get_inventory_report(mysql)
+    inventory_report = reports.get_inventory_report(mysql, admin_selected_year)
 
     # TODO: JL, Customer Value Report
     customer_report = reports.get_customer_value_report(mysql, admin_selected_year)
@@ -987,7 +987,9 @@ def report():
                            yearly_staff_report=yearly_staff_report, 
                            quarterly_staff_report=quarterly_staff_report, 
                            inventory_report=inventory_report, 
-                           customer_report=customer_report, selectable_years=selectable_years, admin_selected_year=admin_selected_year)
+                           customer_report=customer_report, 
+                           selectable_years=selectable_years, 
+                           admin_selected_year=admin_selected_year)
 
 @app.route("/checkout_session", methods=["POST"])
 @login_required
