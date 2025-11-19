@@ -216,34 +216,36 @@ def get_inventory_report(mysql, year=None):
 
     query = """
     SELECT
-        i.name,
+        i.name AS Item_Name,
         SUM(CASE WHEN c.status = 'archived' THEN i.quantity ELSE 0 END) AS Total_Units_Bought,
         SUM(CASE WHEN c.status = 'archived' THEN i.quantity * i.price ELSE 0 END) AS Total_Revenue,
         ROUND(
             IF(
-            -- Condition: Check if total units bought is greater than 0
             SUM(CASE WHEN c.status = 'archived' THEN i.quantity ELSE 0 END) > 0,
-            
-            -- True (perform calculation): (Rent Quantity / Total Quantity) * 100
-            (SUM(CASE WHEN i.type = 'rent' AND c.status = 'archived' THEN i.quantity ELSE 0 END) / 
+            (SUM(CASE WHEN i.type = 'Rental' AND c.status = 'archived' THEN i.quantity ELSE 0 END) / 
              SUM(CASE WHEN c.status = 'archived' THEN i.quantity ELSE 0 END)) * 100,
-            
-            -- False (set to 0): If the total is 0, the percentage must be 0
             0
             ), 
-        2) AS Rent_Percentage
+        2) AS Rent_Percentage,
+        ROUND(
+            IF(
+                i.type = 'Rental',
+                (SUM(CASE WHEN c.status = 'archived' THEN i.quantity ELSE 0 END) * 0.25 / 365.0) * 100,
+                NULL
+            ),
+        2) AS Utilization_Rate
     FROM
         item i
     JOIN
         cart c ON i.cart_id = c.cart_id
     GROUP BY
-        i.name
+        i.name, i.type
     ORDER BY
         Total_Units_Bought DESC;
     """
     try:
         cur = mysql.connection.cursor()
-        cur.execute(query, (year,))
+        cur.execute(query)
         report = cur.fetchall()
         cur.close()
         return report
