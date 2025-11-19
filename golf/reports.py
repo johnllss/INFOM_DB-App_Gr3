@@ -25,7 +25,7 @@ def get_yearly_sales_report(mysql, year=None):
         JOIN
             session_user su ON gs.session_id = su.session_id
         WHERE
-            su.status = 'Confirmed' AND gs.status IN ('Finished', 'Ongoing') AND YEAR(gs.session_schedule) = %s
+            su.status = 'Confirmed' AND gs.status IN ('Finished', 'Ongoing')
         UNION ALL
         SELECT
             YEAR(p.date_paid) AS year,
@@ -39,7 +39,7 @@ def get_yearly_sales_report(mysql, year=None):
         JOIN
             cart c ON p.cart_id = c.cart_id
         WHERE
-            c.status = 'archived' AND YEAR(p.date_paid) = %s
+            c.status = 'archived'
         UNION ALL
         SELECT
             YEAR(p.date_paid) AS year,
@@ -51,8 +51,9 @@ def get_yearly_sales_report(mysql, year=None):
         FROM
             payment p
         WHERE
-            p.status = 'Paid' AND p.cart_id IS NULL AND p.session_user_id IS NULL AND YEAR(p.date_paid) = %s
+            p.status = 'Paid' AND p.cart_id IS NULL AND p.session_user_id IS NULL
     ) AS combined_revenue
+    WHERE year = %s
     GROUP BY
         year
     ORDER BY
@@ -60,7 +61,7 @@ def get_yearly_sales_report(mysql, year=None):
     """
     try:
         cur = mysql.connection.cursor()
-        cur.execute(query, (year, year, year))
+        cur.execute(query, (year,))
         report = cur.fetchall()
         cur.close()
         return report
