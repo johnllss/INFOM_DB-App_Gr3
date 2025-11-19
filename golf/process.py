@@ -172,7 +172,7 @@ def validate_payment_method(payment_method):
 
     return method, message
 
-def process_membership_payment(cur, user_id):
+def process_membership_payment(cur, user_id, payment_method_enum):
 # UPDATING OF USER'S MEMBERSHIP tier AND membership_end
     # extract membership details from session through 
     checkout_details = session.get("checkout_details", {})
@@ -230,11 +230,6 @@ def process_membership_payment(cur, user_id):
                     WHERE user_id = %s
                     """,
                     (tier, new_membership_start, new_membership_end, user_id))
-
-# CREATING OF RECORD IN payment TABLE
-    # extract payment method 
-    payment_method = request.form.get("method")
-    payment_method_enum, message = validate_payment_method(payment_method)
     
     # now, create the payment record
     cur.execute("""

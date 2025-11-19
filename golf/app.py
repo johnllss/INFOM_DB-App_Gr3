@@ -925,7 +925,7 @@ def account():
 # DRIVING RANGE INFO (Limit 4 rows for display)
 # note: driving range info should display data from most recent 4 sessions down to least recent 4 sessions
     cur.execute("""
-                SELECT su.buckets as buckets, su.longest_range as longest_range, DATE_FORMAT(gs.session_schedule, '%%Y-%%m-%%d') as date_played
+                SELECT su.buckets as buckets, su.longest_range as range, DATE_FORMAT(gs.session_schedule, '%%Y-%%m-%%d') as date_played
                 FROM session_user su JOIN golf_session gs ON su.session_id = gs.session_id
                 WHERE su.user_id = %s AND gs.type = 'Driving Range' AND su.longest_range IS NOT NULL
                 ORDER BY gs.session_schedule DESC
@@ -1029,7 +1029,7 @@ def checkout():
             # Process payments modularly
             
             if checkout_context["membership_fee"] != 0:
-                process.process_membership_payment(cur, user_id)
+                process.process_membership_payment(cur, user_id, payment_method_enum)
 
             if checkout_context["cart_fee"] != 0:
                 process.process_cart_payment(cur, user_id, checkout_context, payment_method_enum)
