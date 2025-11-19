@@ -1,5 +1,9 @@
 # TODO: Ronald, Sales Performance Report
-def get_yearly_sales_report(mysql):
+def get_yearly_sales_report(mysql, year=None):
+    if year is None:
+        from datetime import datetime
+        year = datetime.now().year
+
     query = """
     SELECT 
         year,
@@ -21,7 +25,7 @@ def get_yearly_sales_report(mysql):
         JOIN
             session_user su ON gs.session_id = su.session_id
         WHERE
-            su.status = 'Confirmed' AND gs.status IN ('Finished', 'Ongoing')
+            su.status = 'Confirmed' AND gs.status IN ('Finished', 'Ongoing') AND YEAR(gs.session_schedule) = %s
         UNION ALL
         SELECT
             YEAR(p.date_paid) AS year,
@@ -35,7 +39,7 @@ def get_yearly_sales_report(mysql):
         JOIN
             cart c ON p.cart_id = c.cart_id
         WHERE
-            c.status = 'archived'
+            c.status = 'archived' AND YEAR(p.date_paid) = %s
         UNION ALL
         SELECT
             YEAR(p.date_paid) AS year,
@@ -47,7 +51,7 @@ def get_yearly_sales_report(mysql):
         FROM
             payment p
         WHERE
-            p.status = 'Paid' and p.cart_id IS NULL and p.session_user_id IS NULL
+            p.status = 'Paid' AND p.cart_id IS NULL AND p.session_user_id IS NULL AND YEAR(p.date_paid) = %s
     ) AS combined_revenue
     GROUP BY
         year
@@ -56,7 +60,7 @@ def get_yearly_sales_report(mysql):
     """
     try:
         cur = mysql.connection.cursor()
-        cur.execute(query)
+        cur.execute(query, (year, year, year)) # 3 years passed for 3 union queries
         report = cur.fetchall()
         cur.close()
         return report
@@ -84,7 +88,7 @@ def get_yearly_staff_report(mysql, year=None):
     JOIN
         golf_session gs ON su.session_id = gs.session_id
     WHERE
-        YEAR(gs.session_schedule) = %s
+        YEAR(gs.session_schedule) = %s AND su.status = 'Confirmed'
     GROUP BY
         s.staff_id, s.name, s.role, session_year
     ORDER BY
@@ -119,7 +123,7 @@ def get_quarterly_staff_report(mysql, year=None):
     JOIN
         golf_session gs ON su.session_id = gs.session_id
     WHERE
-        YEAR(gs.session_schedule) = %s
+        YEAR(gs.session_schedule) = %s AND su.status = 'Confirmed'
     GROUP BY
         s.staff_id, s.name, s.role, session_quarter
     ORDER BY
@@ -140,7 +144,7 @@ def get_inventory_report(mysql):
 
     query = """
     SELECT
-        i.name AS Item_Name,
+        i.name,
         SUM(i.quantity) AS Total_Units_Bought,
         SUM(i.quantity * i.price) AS Total_Revenue,
         ROUND(
@@ -149,7 +153,7 @@ def get_inventory_report(mysql):
         ) AS Rent_Percentage
     FROM
         item i
-    JOIN
+    LEFT JOIN
         cart c ON i.cart_id = c.cart_id
     WHERE
         c.status = 'archived'
@@ -202,6 +206,8 @@ def get_customer_value_report(mysql, year=None):
                 WHERE YEAR (p.date_paid) = %s AND p.status = 'Paid'
                 GROUP BY p.user_id
     ) AS yearlypayments ON u.user_id = yearlypayments.user_id
+    ORDER BY total_amount_spent DESC;
+    WHERE (yearlysessions.total_sessions IS NOT NULL AND yearlysessions.total_sessions > 0) OR (yearlypayments.total_spent IS NOT NULL AND yearly_payments.total_spent > 0)
     ORDER BY total_amount_spent DESC;
     """
     try:

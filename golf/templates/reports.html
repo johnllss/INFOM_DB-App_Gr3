@@ -41,18 +41,22 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for row in yearly_sales_report %}
-                    <tr>
-                        <td>{{ row.year }}</td>
-                        <td>{{ row.session_items }}</td>
-                        <td>{{ row.membership_subscriptions }}</td>
-                        <td>{{ row.renewal_rate }}</td>
-                        <td>{{ row.total_sessions }}</td>
-                        <td>{{ row.unique_customers }}</td>
-                    </tr>
+                    {% if yearly_sales_report %}
+                        {% for row in yearly_sales_report %}
+                        <tr>
+                            <td>{{ row.year }}</td>
+                            <td>{{ row.session_items | php }}</td>
+                            <td>{{ row.membership_subscriptions | php }}</td>
+                            <td>{{ row.renewal_rate }}</td>
+                            <td>{{ row.total_sessions }}</td>
+                            <td>{{ row.unique_customers }}</td>
+                        </tr>
+                        {% endfor %}
                     {% else %}
-                    <tr><td colspan="6" class="text-center">No sales data found.</td></tr>
-                    {% endfor %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">No sales data found for {{ admin_selected_year }}</td>
+                    </tr>
+                    {% endif %}
                 </tbody>
             </table>
         </div>
@@ -68,15 +72,19 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for row in yearly_staff_report %}
-                    <tr>
-                        <td>{{ row.name }}</td>
-                        <td>{{ row.role }}</td>
-                        <td>{{ row.total_sessions }}</td>
-                    </tr>
+                    {% if yearly_staff_report %}
+                        {% for row in yearly_staff_report %}
+                        <tr>
+                            <td>{{ row.name }}</td>
+                            <td>{{ row.role }}</td>
+                            <td>{{ row.total_sessions }}</td>
+                        </tr>
+                        {% endfor %}
                     {% else %}
-                    <tr><td colspan="3" class="text-center">No staff data for {{ admin_selected_year }}</td></tr>
-                    {% endfor %}
+                    <tr>
+                        <td colspan="3" class="text-center text-muted py-4">No staff data for {{ admin_selected_year }}.</td>
+                    </tr>
+                    {% endif %}
                 </tbody>
             </table>
         </div>
@@ -93,15 +101,45 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for row in quarterly_staff_report %}
+                    {% if quarterly_staff_report %}
+                        {% for row in quarterly_staff_report %}
+                        <tr>
+                            <td>{{ row.name }}</td>
+                            <td>{{ row.role }}</td>
+                            <td>{{ row.session_quarter.split('-')[1] }}</td>
+                            <td>{{ row.total_sessions }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
                     <tr>
-                        <td>{{ row.name }}</td>
-                        <td>{{ row.role }}</td>
-                        <td>{{ row.session_quarter.split('-')[1] }}</td>
-                        <td>{{ row.total_sessions }}</td>
+                        <td colspan="4" class="text-center text-muted py-4">No quarterly data for {{ admin_selected_year }}.</td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+        <h2 class="mt-5">Inventory Report</h2>
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead class="text-white" style="background-color: #2e944b;">
+                    <tr>
+                        <th>Item Name</th>
+                        <th>Total Purchases/Rent</th>
+                        <th>Total Revenue</th>
+                        <th>Avergae Utilization</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in inventory_report %}
+                    <tr>
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.Total_Units_Bought }}</td>
+                        <td>{{ item.Total_Revenue }}</td>
+                        <td>{{ item.Rent_Percentage }}</td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="4" class="text-center">No quarterly data for {{ admin_selected_year }}</td></tr>
+                    <tr><td colspan="4" class="text-center">No items in Inventory</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -134,7 +172,7 @@
                         {% endfor %}
                     {% else %}
                         <tr>
-                            <td colspan="6" class="text-center">No customer data available for {{ admin_selected_year }}</td>
+                            <td colspan="6" class="text-center text-muted py-4">No customer data available for {{ admin_selected_year }}.</td>
                         </tr>
                     {% endif %}
                 </tbody>

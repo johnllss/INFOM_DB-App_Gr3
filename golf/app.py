@@ -971,12 +971,13 @@ def report():
     # FETCHING REPORTS SECTION
     # Only admins can reach this point
     # TODO: Ronald, Sales Performance Report
-    yearly_sales_report = reports.get_yearly_sales_report(mysql)
+    yearly_sales_report = reports.get_yearly_sales_report(mysql, admin_selected_year)
     # TODO: Gab, Staff Performance Report
-    yearly_staff_report = reports.get_yearly_staff_report(mysql)
-    quarterly_staff_report = reports.get_quarterly_staff_report(mysql)
+    yearly_staff_report = reports.get_yearly_staff_report(mysql, admin_selected_year)
+    quarterly_staff_report = reports.get_quarterly_staff_report(mysql, admin_selected_year)
     
     # TODO: Jerry, Inventory Report
+    inventory_report = reports.get_inventory_report(mysql)
 
     # TODO: JL, Customer Value Report
     customer_report = reports.get_customer_value_report(mysql, admin_selected_year)
@@ -984,7 +985,8 @@ def report():
     return render_template("reports.html", 
                            yearly_sales_report=yearly_sales_report,
                            yearly_staff_report=yearly_staff_report, 
-                           quarterly_staff_report=quarterly_staff_report, #inventory_report=inventory_report, 
+                           quarterly_staff_report=quarterly_staff_report, 
+                           inventory_report=inventory_report, 
                            customer_report=customer_report, selectable_years=selectable_years, admin_selected_year=admin_selected_year)
 
 @app.route("/checkout_session", methods=["POST"])
