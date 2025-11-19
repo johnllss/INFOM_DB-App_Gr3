@@ -137,7 +137,36 @@ def get_quarterly_staff_report(mysql, year=None):
 
 # TODO: Jerry, Inventory Report
 def get_inventory_report(mysql):
-    pass
+
+    query = """
+    SELECT
+        i.name AS Item_Name,
+        SUM(i.quantity) AS Total_Units_Bought,
+        SUM(i.quantity * i.price) AS Total_Revenue,
+        ROUND(
+            (SUM(CASE WHEN i.type = 'rent' THEN i.quantity ELSE 0 END) / SUM(i.quantity)) * 100, 
+            2
+        ) AS Rent_Percentage
+    FROM
+        item i
+    JOIN
+        cart c ON i.cart_id = c.cart_id
+    WHERE
+        c.status = 'archived'
+    GROUP BY
+        i.name
+    ORDER BY
+        Total_Units_Bought DESC;
+    """
+    try:
+        cur = mysql.connection.cursor()
+        cur.execute(query)
+        report = cur.fetchall()
+        cur.close()
+        return report
+    except Exception as e:
+        print(f"Error fetching quarterly staff report: {e}")
+        return []
 
 # TODO: JL, Customer Value Report
 def get_customer_value_report(mysql, year=None):
