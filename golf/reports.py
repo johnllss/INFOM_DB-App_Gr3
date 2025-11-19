@@ -165,7 +165,7 @@ def get_inventory_report(mysql):
         cur.close()
         return report
     except Exception as e:
-        print(f"Error fetching quarterly staff report: {e}")
+        print(f"Error fetching inventory report: {e}")
         return []
 
 # TODO: JL, Customer Value Report
@@ -212,10 +212,5 @@ def get_customer_value_report(mysql, year=None):
         cur.close()
         return report
     except Exception as e:
-        print(f"Error fetching quarterly staff report: {e}")
+        print(f"Error fetching customer value report: {e}")
         return []
-
-
-
-
-

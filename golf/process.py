@@ -49,11 +49,11 @@ def load_checkout_context(cur, user_id):
 
     # fallback to session_user_id if no checkout_details
     if not checkout_type and "single_checkout_id" in session:
-        checkout_type = "single_session"
         checkout_details = {
             "type": "single_session",
             "session_user_id": session["single_checkout_id"]
         }
+        checkout_type = "single_session"
 
     if checkout_type == "single_session":
         # Filter for the specific ID passed from the route
@@ -210,7 +210,7 @@ def process_membership_payment(cur, user_id):
 
     # USER RENEWING WHILE THEY HAVE ACTIVE MEMBERSHIP
     elif user['membership_end'] and user['membership_end'] >= date_today:
-        new_membership_end = date_today + timedelta(days=30 * months)
+        new_membership_end = user['membership_end'] + timedelta(days=30 * months)
 
         cur.execute("""
                     UPDATE user

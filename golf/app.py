@@ -69,24 +69,31 @@ def register():
         if password != confirmation:
             return apology("Password should match with confirmation.", 400)
 
-        hash = generate_password_hash(password)
+        cur = mysql.connection.cursor()
+        try:
+            hash = generate_password_hash(password)
 
-        # User Creation
-        cur.execute("INSERT INTO user (first_name, last_name, email, contact, hash) VALUES (%s, %s, %s, %s, %s)",
-            (first_name, last_name, email, contact, hash))
-        user_id = cur.lastrowid
-        
-        # Cart Creation
-        cur.execute("INSERT INTO cart (user_id, total_price) VALUES (%s, 0)", (user_id,))
-        cart_id = cur.lastrowid
+            # User Creation
+            cur.execute("INSERT INTO user (first_name, last_name, email, contact, hash) VALUES (%s, %s, %s, %s, %s)",
+                (first_name, last_name, email, contact, hash))
+            user_id = cur.lastrowid
+            
+            # Cart Creation
+            cur.execute("INSERT INTO cart (user_id, total_price) VALUES (%s, 0)", (user_id,))
+            cart_id = cur.lastrowid
 
-        # Payment Creation
-        cur.execute("""
-            INSERT INTO payment (total_price, payment_method, status, discount_applied, user_id, cart_id)
-            VALUES (0.00, 'Cash', 'Pending', 0.00, %s, %s)
-        """, (user_id, cart_id))
-        mysql.connection.commit()
-        cur.close()
+            # Payment Creation for the cart (optional, but good for consistency)
+            cur.execute("""
+                INSERT INTO payment (total_price, payment_method, status, discount_applied, user_id, cart_id)
+                VALUES (0.00, 'Cash', 'Pending', 0.00, %s, %s)
+            """, (user_id, cart_id))
+            
+            mysql.connection.commit()
+        except Exception as e:
+            mysql.connection.rollback()
+            return apology(f"Registration failed: {e}", 500)
+        finally:
+            cur.close()
 
         return redirect("/login")
     else:
@@ -681,7 +688,7 @@ def fairway():
             else:
                 # create new pending booking
                 # Insert session_user entry
-                cur.execute("INSERT INTO session_user (user_id, session_id, status, caoch_id, caddie_id) VALUES (%s, %s, %s, %s, %s)",
+                cur.execute("INSERT INTO session_user (user_id, session_id, status, coach_id, caddie_id) VALUES (%s, %s, %s, %s, %s)",
                             (session['user_id'], session_id, "Pending", coach_id, caddie_id))
                 session["single_checkout_id"] = cur.lastrowid
 
