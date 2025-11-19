@@ -46,11 +46,23 @@ def load_checkout_context(cur, user_id):
     # Logic: Check if we want ONE session or ALL sessions
     checkout_details = session.get("checkout_details", {})
     checkout_type = checkout_details.get("type")
+
+    # fallback to session_user_id if no checkout_details
+    if not checkout_type and "single_checkout_id" in session:
+        checkout_type = "single_session"
+        checkout_details = {
+            "type": "single_session",
+            "session_user_id": session["single_checkout_id"]
+        }
+
     if checkout_type == "single_session":
         # Filter for the specific ID passed from the route
         target_id = checkout_details.get("session_user_id")
-        query += " AND su.session_user_id = %s"
-        params.append(target_id)
+
+        # only add filter if target_id exists
+        if target_id:
+            query += " AND su.session_user_id = %s"
+            params.append(target_id)
         
         # Execute for single session
         cur.execute(query, tuple(params))

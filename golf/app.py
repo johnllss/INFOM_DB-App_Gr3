@@ -601,6 +601,11 @@ def fairway():
                         (session['user_id'], session_id, "Pending"))
             session["single_checkout_id"] = cur.lastrowid
 
+            session["checkout_details"] = {
+                "type": "single_session",
+                "session_user_id": cur.lastrowid
+            }
+
             # Check if session is now fully booked
             cur.execute("SELECT COUNT(*) as count FROM session_user WHERE session_id = %s", (session_id,))
             user_count = cur.fetchone()
@@ -711,6 +716,11 @@ def range():
             cur.execute("INSERT INTO session_user (user_id, session_id, status, buckets) VALUES (%s, %s, %s, %s)",
                         (session['user_id'], session_id, "Pending", bucket))
             session["single_checkout_id"] = cur.lastrowid
+
+            session["checkout_details"] = {
+                "type": "single_session",
+                "session_user_id": cur.lastrowid
+            }
 
             # Check if session is now fully booked
             cur.execute("SELECT COUNT(*) as count FROM session_user WHERE session_id = %s", (session_id,))
