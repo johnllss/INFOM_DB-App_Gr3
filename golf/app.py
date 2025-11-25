@@ -22,11 +22,11 @@ app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
 
-# MySQL Configuration
-app.config['MYSQL_HOST'] = 'bdxiyb8jgtmepmiynhz9-mysql.services.clever-cloud.com'
-app.config['MYSQL_USER'] = 'uhxxpvfj9cyz1zcv'
-app.config['MYSQL_PASSWORD'] = '3K27XZbrqzZMjW2o6btz'
-app.config['MYSQL_DB'] = 'bdxiyb8jgtmepmiynhz9'
+# MySQL Configuration (LOCALHOST)
+app.config['MYSQL_HOST'] = 'localhost'
+app.config['MYSQL_USER'] = 'root'
+app.config['MYSQL_PASSWORD'] = 'workbench1234' # <--- sarili niyong password
+app.config['MYSQL_DB'] = 'golf_db'
 app.config['MYSQL_PORT'] = 3306
 app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
 
@@ -1013,6 +1013,33 @@ def history():
     cur.close()
 
     return render_template("history.html", payments=payments)
+
+@app.route("/sessions")
+@login_required
+def sessions():
+    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+
+    cur.execute("""
+        SELECT 
+            su.session_user_id,
+            su.user_id,
+            CONCAT(u.first_name, ' ', u.last_name) AS user_name,
+            gs.type,
+            gs.session_schedule AS session_datetime,
+            su.status,
+            su.score_fairway,
+            su.longest_range,
+            su.buckets
+        FROM session_user su
+        JOIN golf_session gs ON su.session_id = gs.session_id
+        JOIN user u ON su.user_id = u.user_id
+        WHERE su.status = 'Confirmed' AND su.user_id = %s
+        ORDER BY gs.session_schedule DESC
+    """, (session['user_id'],))
+    confirmed = cur.fetchall()
+    cur.close()
+
+    return render_template("sessions.html", confirmed=confirmed)
 
 @app.route("/reports")
 @login_required

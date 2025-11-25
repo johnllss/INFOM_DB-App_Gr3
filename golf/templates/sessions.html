@@ -1,0 +1,41 @@
+{% extends "layout.html" %}
+
+{% block title %}All Confirmed Sessions{% endblock %}
+
+{% block main %}
+<div class="container">
+  <h2 class="my-4">All Confirmed Sessions</h2>
+
+  {% if confirmed %}
+    <div class="list-group">
+      {% for s in confirmed %}
+        <div class="list-group-item list-group-item-action mb-2">
+          <div class="d-flex w-100 justify-content-between">
+            <div>
+              <h5 class="mb-1">{{ s.type or 'Session' }}</h5>
+              <small class="text-muted">User: {{ s.user_name }} (ID: {{ s.user_id }})</small>
+            </div>
+            <small>{{ s.session_datetime }}</small>
+          </div>
+          <p class="mb-1">
+            {% if s.score_fairway %}Score: {{ s.score_fairway }}
+            {% elif s.longest_range %}Longest Range: {{ s.longest_range }}
+            {% elif s.buckets %}Buckets: {{ s.buckets }}
+            {% else %}—{% endif %}
+          </p>
+
+          {# show assigned staff (coach/caddie) if any #}
+          <p class="mb-1">
+            <strong>Assigned:</strong>
+            {{ s.staff_assigned if s.staff_assigned else '—' }}
+          </p>
+
+          <small>Status: {{ s.status }}</small>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="alert alert-info">No confirmed sessions found.</div>
+  {% endif %}
+</div>
+{% endblock %}
