@@ -305,6 +305,13 @@ def process_golf_session_payment(cur, user_id, checkout_context, payment_method_
     checkout_details = session.get("checkout_details", {})
     checkout_type = checkout_details.get("type")
 
+    if not checkout_type and "single_checkout_id" in session:
+        checkout_details = {
+            "type": "single_session",
+            "session_user_id": session["single_checkout_id"]
+        }
+        checkout_type = "single_session"
+
     query = "SELECT session_user_id, coach_id, caddie_id, buckets FROM session_user WHERE user_id = %s AND status = 'Pending'"
     params = [user_id]
 
