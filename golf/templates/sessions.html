@@ -18,10 +18,10 @@
             <small>{{ s.session_datetime }}</small>
           </div>
           <p class="mb-1">
-            {% if s.score_fairway %}Score: {{ s.score_fairway }}
-            {% elif s.longest_range %}Longest Range: {{ s.longest_range }}
-            {% elif s.buckets %}Buckets: {{ s.buckets }}
-            {% else %}—{% endif %}
+            {% if s.type == 'Driving Range' and s.buckets %}Buckets: {{ s.buckets }}
+            {% elif s.type == 'Fairway' and s.holes %}Holes: {{ s.holes }}
+            {% else %}No session details
+            {% endif %}
           </p>
 
           {# show assigned staff (coach/caddie) if any #}

@@ -25,7 +25,7 @@ Session(app)
 # MySQL Configuration (LOCALHOST)
 app.config['MYSQL_HOST'] = 'localhost'
 app.config['MYSQL_USER'] = 'root'
-app.config['MYSQL_PASSWORD'] = 'workbench1234' # <--- sarili niyong password
+app.config['MYSQL_PASSWORD'] = 'pass123' # <--- sarili niyong password
 app.config['MYSQL_DB'] = 'golf_db'
 app.config['MYSQL_PORT'] = 3306
 app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
@@ -1020,22 +1020,28 @@ def sessions():
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
 
     cur.execute("""
-        SELECT 
+        SELECT
             su.session_user_id,
             su.user_id,
             CONCAT(u.first_name, ' ', u.last_name) AS user_name,
             gs.type,
             gs.session_schedule AS session_datetime,
+            gs.holes,
             su.status,
-            su.score_fairway,
-            su.longest_range,
-            su.buckets
+            su.buckets,
+            COALESCE(
+                NULLIF(CONCAT_WS(', ', coach.name, caddie.name), ''),
+                NULL
+            ) AS staff_assigned
         FROM session_user su
         JOIN golf_session gs ON su.session_id = gs.session_id
         JOIN user u ON su.user_id = u.user_id
+        LEFT JOIN staff coach ON su.coach_id = coach.staff_id
+        LEFT JOIN staff caddie ON su.caddie_id = caddie.staff_id
         WHERE su.status = 'Confirmed' AND su.user_id = %s
         ORDER BY gs.session_schedule DESC
     """, (session['user_id'],))
+
     confirmed = cur.fetchall()
     cur.close()
 
